@@ -389,7 +389,7 @@ function DashboardContent() {
                 setTimeout(() => window.location.reload(), 1500);
             } else {
                 const data = await res.json();
-                toast.error("Something went wrong");
+                toast.error(data.error || "Something went wrong");
             }
         } catch {
             toast.error("Something went wrong");
@@ -437,7 +437,7 @@ function DashboardContent() {
                 setTimeout(() => window.location.reload(), 1500);
             } else {
                 const data = await res.json();
-                toast.error("Something went wrong");
+                toast.error(data.error || "Something went wrong");
             }
         } catch {
             toast.error("Something went wrong");
