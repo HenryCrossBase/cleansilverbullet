@@ -353,7 +353,7 @@ function DashboardContent() {
     };
 
     const submitProduct = async () => {
-        if (!targetCategory || !newProduct.price || !newProduct.log)
+        if (!newProduct.price || !newProduct.log)
             return toast.error("Something went wrong");
         const token = document.cookie.replace(
             /(?:(?:^|.*;\s*)sb_token\s*\=\s*([^;]*).*$)|^.*$/,
@@ -367,17 +367,18 @@ function DashboardContent() {
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    productName: targetCategory,
+                    productName: "Bulk",
                     description: newProduct.info || "Automated batch deployment",
                     price: newProduct.price,
                     logContent: newProduct.log,
-                    category: newProduct.category,
-                    country: newProduct.country,
+                    category: "ACCOUNT",
+                    country: "Global",
                     isBulk: true,
                 }),
             });
             if (res.ok) {
-                toast.success("Done");
+                const data = await res.json();
+                toast.success(`Success! Added: ${data.added} | Duplicated: ${data.duplicated} | Failed: ${data.failed}`);
                 setNewProduct({
                     price: "",
                     log: "",
@@ -386,7 +387,7 @@ function DashboardContent() {
                     country: "Global",
                 });
                 setTargetCategory("");
-                setTimeout(() => window.location.reload(), 1500);
+                setTimeout(() => window.location.reload(), 2000);
             } else {
                 const data = await res.json();
                 toast.error(data.error || "Something went wrong");
@@ -1914,73 +1915,12 @@ function DashboardContent() {
 
                             <div className="mobile-grid-1 grid gap-8 grid-cols-1">
                                 <div className="bg-card rounded-2xl p-8 border border-border shadow-sm relative overflow-visible">
-                                    <div className="text-foreground text-xl font-bold mb-6 flex items-center gap-3">
-                                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 text-sm">1</span>
-                                        Select Target Category
-                                    </div>
-                                    <label className="block text-muted-foreground text-xs uppercase font-bold tracking-wider mb-2">
-                                        TARGET SITE
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="Type new target (e.g. Netflix, PayPal) or click below to select..."
-                                        value={targetCategory}
-                                        onChange={(e) =>
-                                            setTargetCategory(e.target.value)
-                                        }
-                                        className="w-full bg-background/50 border border-border/50 text-foreground py-4 px-5 rounded-xl text-base mb-6 outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-                                    />
-
-                                    {existingCategories.length > 0 && (
-                                        <div className="flex gap-2 flex-wrap">
-                                            {existingCategories.map((cat) => (
-                                                <span
-                                                    key={cat}
-                                                    onClick={() =>
-                                                        setTargetCategory(cat)
-                                                    }
-                                                    className="bg-primary/10 text-primary border border-primary/20 py-2 px-5 rounded-full text-sm font-bold cursor-pointer hover:bg-primary/20 hover:scale-105 transition-all shadow-sm"
-                                                >
-                                                    {cat}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div
-                                    className={cn(
-                                        "bg-card rounded-2xl p-8 border border-border shadow-sm relative overflow-visible transition-all duration-300",
-                                        targetCategory
-                                            ? "opacity-100 translate-y-0"
-                                            : "opacity-40 translate-y-2",
-                                        targetCategory
-                                            ? "pointer-events-auto"
-                                            : "pointer-events-none",
-                                    )}
-                                >
-                                    <div className="text-foreground text-xl font-bold mb-6 flex items-center gap-3">
-                                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 text-sm">2</span>
-                                        Product Details & Upload
+                                    <div className="text-foreground text-xl font-bold mb-6">
+                                        Upload Products in Bulk
                                     </div>
 
                                     <div className="mobile-grid-1 grid gap-8 items-start grid-cols-[1fr_2fr]">
                                         <div>
-                                            <label className="block text-muted-foreground text-xs uppercase font-bold tracking-wider mb-2">
-                                                COUNTRY
-                                            </label>
-                                            <div className="mb-6">
-                                                <CountrySelector
-                                                    value={newProduct.country}
-                                                    onChange={(val) =>
-                                                        setNewProduct({
-                                                            ...newProduct,
-                                                            country: val,
-                                                        })
-                                                    }
-                                                />
-                                            </div>
-
                                             <label className="block text-muted-foreground text-xs uppercase font-bold tracking-wider mb-2">
                                                 PRICE (BULLETS)
                                             </label>
@@ -2006,82 +1946,35 @@ function DashboardContent() {
                                                     You will earn ${(parseInt(newProduct.price) * getSplitRate()).toFixed(2)} after platform fee.
                                                 </div>
                                             )}
-
-                                            <label className="block text-muted-foreground text-xs uppercase font-bold tracking-wider mt-6 mb-2">
-                                                INFO / DESCRIPTION
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Full Access | Valid | No bans"
-                                                value={newProduct.info}
-                                                onChange={(e) =>
-                                                    setNewProduct({
-                                                        ...newProduct,
-                                                        info: e.target.value,
-                                                    })
-                                                }
-                                                className="w-full bg-background/50 border border-border/50 text-foreground py-4 px-5 rounded-xl text-[0.95rem] outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-                                            />
                                         </div>
                                         <div>
                                             <label className="block text-muted-foreground text-xs uppercase font-bold tracking-wider mb-2">
-                                                UPLOAD LOGS (.TXT FILE)
+                                                PASTE BULK LOGS DIRECTLY (ONE ACCOUNT PER LINE)
                                             </label>
-                                            <div className="bg-background/40 border-2 border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all rounded-xl p-10 text-center relative flex flex-col items-center justify-center min-h-[160px] shadow-sm">
-                                                <input
-                                                    type="file"
-                                                    accept=".txt"
-                                                    onChange={(e) => {
-                                                        const file =
-                                                            e.target.files?.[0];
-                                                        if (file) {
-                                                            const r =
-                                                                new FileReader();
-                                                            r.onload = (evt) =>
-                                                                setNewProduct(
-                                                                    (prev) => ({
-                                                                        ...prev,
-                                                                        log: evt
-                                                                            .target
-                                                                            ?.result as string,
-                                                                    }),
-                                                                );
-                                                            r.readAsText(file);
-                                                        }
-                                                    }}
-                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                                />
-                                                <svg className="w-10 h-10 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                                                <div className="text-foreground font-bold text-lg mb-2">
-                                                    Drop .txt file here
-                                                </div>
-                                                <div className="text-muted-foreground text-sm font-medium">
-                                                    Format needed: Email:PASS |
-                                                    Age | Balance | Gender
-                                                </div>
-                                                {newProduct.log && (
-                                                    <div className="absolute inset-0 bg-emerald-500/10 backdrop-blur-sm rounded-xl flex items-center justify-center border-2 border-emerald-500/50">
-                                                        <div className="text-emerald-500 font-bold flex items-center gap-2 bg-background p-4 rounded-xl shadow-lg border border-border/50">
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                                                            File Uploaded ({newProduct.log.length} bytes matched)
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <textarea
+                                                rows={8}
+                                                placeholder={`Paste your accounts here. Format:\nProductName | CountryCode | Description | URL | Email | Password`}
+                                                value={newProduct.log}
+                                                onChange={(e) =>
+                                                    setNewProduct({
+                                                        ...newProduct,
+                                                        log: e.target.value,
+                                                    })
+                                                }
+                                                className="w-full bg-background/30 border border-border/60 text-foreground font-mono py-4 px-5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm resize-y"
+                                            />
                                         </div>
                                     </div>
 
                                     <button
                                         onClick={submitProduct}
                                         disabled={
-                                            !targetCategory ||
                                             !newProduct.price ||
                                             !newProduct.log
                                         }
                                         className={cn(
                                             "w-full border-0 py-4 px-6 rounded-xl font-black text-lg mt-8 tracking-widest transition-all duration-200 shadow-md",
-                                            !targetCategory ||
-                                                !newProduct.price ||
+                                            !newProduct.price ||
                                                 !newProduct.log
                                                 ? "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
                                                 : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer hover:shadow-lg active:scale-95",

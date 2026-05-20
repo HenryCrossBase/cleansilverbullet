@@ -50,7 +50,7 @@ export default function TelegramPopup() {
                     </div>
                     <div>
                         <h4 className="font-bold text-sm tracking-tight">Official Channel</h4>
-                        <p className="text-xs text-muted-foreground">Join our community!</p>
+                        <p className="text-xs text-sky-400 font-mono">@sbmrkt</p>
                     </div>
                 </div>
                 

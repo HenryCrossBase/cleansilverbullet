@@ -14,6 +14,8 @@ const {
     VENDOR_DASHBOARD_URL,
     HCAPTCHA_SECRET_KEY,
     CF_SECRET_KEY_PRODUCTION,
+    TELEGRAM_CHANNEL_BOT_TOKEN,
+    TELEGRAM_CHANNEL_ID,
 } = require("../env");
 const prisma = require("../lib/prisma");
 const {
@@ -174,6 +176,30 @@ const sendVendorTelegramAlert = async (chatId, message) => {
     }
 };
 
+const sendChannelTelegramAlert = async (message) => {
+    if (!TELEGRAM_CHANNEL_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) return;
+    try {
+        const tgRes = await fetch(
+            `https://api.telegram.org/bot${TELEGRAM_CHANNEL_BOT_TOKEN}/sendMessage`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHANNEL_ID,
+                    text: message,
+                    parse_mode: "HTML",
+                }),
+            },
+        );
+        const tgo = await tgRes.text();
+        appendWebhookLog(
+            `[CHANNEL PUSH] Channel: ${TELEGRAM_CHANNEL_ID} - Status: ${tgRes.status} - Output: ${tgo}`,
+        );
+    } catch (error) {
+        logger.error("Telegram Channel Webhook Error", error);
+    }
+};
+
 const maskUsername = (username, req) => {
     if (req?.user?.rank === "ADMIN") return username;
     const showLen = Math.ceil(username.length / 2);
@@ -227,6 +253,7 @@ module.exports = {
     publicSubmitLimiter,
     sendAdminTelegramAlert,
     sendVendorTelegramAlert,
+    sendChannelTelegramAlert,
     signAuthToken,
     upload,
     verifyHcaptcha,

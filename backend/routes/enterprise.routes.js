@@ -8,6 +8,7 @@ const {
     authenticateToken,
     prisma,
     sendAdminTelegramAlert,
+    sendChannelTelegramAlert,
     maskUsername,
 } = require("./shared");
 const { getLogger } = require("../lib/logger");
@@ -845,65 +846,130 @@ router.post(
             if (lines.length === 0)
                 return res.status(400).json({ error: "Payload nullified." });
 
-            const duplicateCheck = await prisma.product.findFirst({
-                where: {
-                    logContent: {
-                        in: lines.map(l => l.trim())
-                    }
-                }
-            });
-
-            if (duplicateCheck) {
-                return res.status(400).json({ error: "this item is already added by you or another seller !" });
-            }
+            let addedCount = 0;
+            let duplicatedCount = 0;
+            let failedCount = 0;
 
             const payloadMappings = [];
-            
+            const batchLogs = new Set();
+            const validLogsToCheck = [];
+            const parsedLines = [];
+
             for (const line of lines) {
                 const trimmedLine = line.trim();
-                
                 if (req.body.isBulk) {
-                    const parts = trimmedLine.split(' | ');
+                    const parts = trimmedLine.split('|').map((p) => p.trim());
                     if (parts.length !== 6) {
-                        return res.status(400).json({ error: "Wrong format! Bulk upload MUST use: ProductName | CountryCode | Description | URL | Email | Password" });
+                        failedCount++;
+                        continue;
                     }
                     
-                    const pName = parts[0].trim();
-                    const pCountry = parts[1].trim();
-                    const pDesc = parts[2].trim();
-                    const pUrl = parts[3].trim();
-                    const pEmail = parts[4].trim();
-                    const pPass = parts[5].trim();
+                    const pName = parts[0];
+                    const pCountry = parts[1];
+                    const pDesc = parts[2];
+                    const pUrl = parts[3];
+                    const pEmail = parts[4];
+                    const pPass = parts[5];
                     
-                    payloadMappings.push({
-                        shopId: user.shops[0].id,
+                    const logContentValue = `${pUrl} | ${pEmail} | ${pPass}`;
+                    validLogsToCheck.push(logContentValue);
+                    parsedLines.push({
+                        isBulk: true,
                         productName: pName,
+                        country: pCountry,
                         description: pDesc,
-                        price: parseInt(price),
-                        logContent: `${pUrl} | ${pEmail} | ${pPass}`,
-                        category: category || "GENERAL",
-                        country: pCountry || "Global",
-                        stock: 1,
+                        logContent: logContentValue
                     });
                 } else {
-                    payloadMappings.push({
-                        shopId: user.shops[0].id,
+                    validLogsToCheck.push(trimmedLine);
+                    parsedLines.push({
+                        isBulk: false,
                         productName,
+                        country,
                         description,
-                        price: parseInt(price),
-                        logContent: trimmedLine,
-                        category: category || "GENERAL",
-                        country: country || "Global",
-                        stock: 1,
+                        logContent: trimmedLine
                     });
                 }
             }
 
-            await prisma.product.createMany({
-                data: payloadMappings,
-            });
+            // High performance batch duplicate check
+            const existingDuplicates = new Set();
+            if (validLogsToCheck.length > 0) {
+                const dbDuplicates = await prisma.product.findMany({
+                    where: {
+                        logContent: {
+                            in: validLogsToCheck
+                        }
+                    },
+                    select: {
+                        logContent: true
+                    }
+                });
+                for (const d of dbDuplicates) {
+                    existingDuplicates.add(d.logContent);
+                }
+            }
 
-            res.json(enterpriseResponse.productsCreated(lines.length));
+            // Build payload mappings and increment duplicate counters
+            for (const item of parsedLines) {
+                if (existingDuplicates.has(item.logContent)) {
+                    duplicatedCount++;
+                    continue;
+                }
+                if (batchLogs.has(item.logContent)) {
+                    duplicatedCount++;
+                    continue;
+                }
+                
+                batchLogs.add(item.logContent);
+                payloadMappings.push({
+                    shopId: user.shops[0].id,
+                    productName: item.productName || productName,
+                    description: item.description || description,
+                    price: parseInt(price),
+                    logContent: item.logContent,
+                    category: category || "GENERAL",
+                    country: item.country || country || "Global",
+                    stock: 1,
+                });
+                addedCount++;
+            }
+
+            if (payloadMappings.length > 0) {
+                await prisma.product.createMany({
+                    data: payloadMappings,
+                });
+
+                // --- Telegram Restock Channel Notification ---
+                try {
+                    const shopName = user.shops[0].shopName;
+                    const productCounts = {};
+                    for (const p of payloadMappings) {
+                        const name = p.productName;
+                        if (name) {
+                            productCounts[name] = (productCounts[name] || 0) + 1;
+                        }
+                    }
+                    
+                    const parts = Object.entries(productCounts).map(([name, count]) => `<b>${count} ${name}</b>`);
+                    if (parts.length > 0) {
+                        const message = `🚀 <b>${shopName}</b> have added ${parts.join(", ")}!`;
+                        sendChannelTelegramAlert(message).catch((err) => {
+                            logger.error("Failed to send restock channel alert async:", err);
+                        });
+                    }
+                } catch (tgErr) {
+                    logger.error("Failed to send restock channel alert:", tgErr);
+                }
+            }
+
+            res.json({
+                success: true,
+                message: "Injection process complete.",
+                added: addedCount,
+                duplicated: duplicatedCount,
+                failed: failedCount
+            });
         } catch (err) {
             res.status(500).json({ error: "Log database lock." });
         }

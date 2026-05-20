@@ -24,6 +24,9 @@ const ADMIN_USER_IDS = process.env.ADMIN_USER_IDS
 const ADMIN_BOT_TOKEN = process.env.ADMIN_BOT_TOKEN || "";
 const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || "";
 
+const TELEGRAM_CHANNEL_BOT_TOKEN = process.env.TELEGRAM_CHANNEL_BOT_TOKEN || ADMIN_BOT_TOKEN;
+const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "@sbmrkt";
+
 const APP_BASE_URL = process.env.APP_BASE_URL || "https://silverbullet.to";
 const VENDOR_DASHBOARD_URL =
     process.env.VENDOR_DASHBOARD_URL || `${APP_BASE_URL}/vendor/dashboard`;
@@ -74,4 +77,6 @@ module.exports = {
     RESEND_API_KEY,
     ALLOW_LEGACY_OWNER,
     LOG_LEVEL,
+    TELEGRAM_CHANNEL_BOT_TOKEN,
+    TELEGRAM_CHANNEL_ID,
 };
