@@ -1183,12 +1183,11 @@ bot.on("callback_query", async (query) => {
                 });
                 if (product && product.shop && product.shop.owner) {
                     const ev = product.shop.owner;
-                    let split = 0;
+                    let split = 0.5;
                     if (ev.customSplit !== null) split = ev.customSplit;
-                    else if (ev.rank === "ENTERPRISE") split = 0.75;
+                    else if (ev.rank === "ENTERPRISE" || ev.rank === "ADMIN") split = 0.75;
                     else if (ev.rank === "PREMIUM")
                         split = 0.6;
-                    else if (ev.rank === "PRO") split = 0.5; // Fallback mapping based on UI logic
                     platformProfit += order.pricePaid * (1 - split);
                 } else {
                     platformProfit += order.pricePaid; // Unknown vendor = 100% platform absorb

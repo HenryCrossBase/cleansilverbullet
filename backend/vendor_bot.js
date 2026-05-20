@@ -185,11 +185,11 @@ async function runDailySummary() {
             const splitRate =
                 vendor.customSplit !== null
                     ? vendor.customSplit
-                    : vendor.rank === "ENTERPRISE"
+                    : (vendor.rank === "ENTERPRISE" || vendor.rank === "ADMIN")
                       ? 0.75
-                      : vendor.rank === "SUPREME" || vendor.rank === "SYNDICATE"
+                      : vendor.rank === "PREMIUM"
                         ? 0.6
-                        : 0;
+                        : 0.5;
             const earning = notRefundedAmount * splitRate;
 
             const dateStr = now.toDateString();

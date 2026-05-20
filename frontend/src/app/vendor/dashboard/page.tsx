@@ -1255,13 +1255,13 @@ function DashboardContent() {
                                 })()}
                             </div>
 
-                            {/* Top 8 Earning Stores */}
+                            {/* Top 10 Earning Stores */}
                             <div className="bg-muted/20 p-6 rounded-xl border border-border">
                                 <h3 className="text-foreground text-xl font-bold mb-4 flex items-center gap-2 mt-0 pl-0">
                                     <span className="text-yellow-500 flex">
                                         <Trophy size={20} />
                                     </span>{" "}
-                                    Top 8 Earning Stores
+                                    Top 10 Earning Stores
                                 </h3>
                                 <div className="flex flex-col gap-2">
                                     {enterpriseData.topStores?.map(
@@ -1311,7 +1311,7 @@ function DashboardContent() {
                                                     </div>
                                                     <div className="text-emerald-500 font-black text-[1.2rem] font-mono">
                                                         $
-                                                        {store.vendorBalance.toFixed(
+                                                        {(store.totalEarnings ?? store.vendorBalance).toFixed(
                                                             2,
                                                         )}
                                                     </div>

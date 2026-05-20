@@ -314,7 +314,15 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
             };
         });
 
-        const topStoresRaw = await prisma.user.findMany({
+        const refundedDisputes = await prisma.dispute.findMany({
+            where: { status: "REFUND_APPROVED" },
+            select: { orderId: true },
+        });
+        const allRefundedOrderIds = new Set(
+            refundedDisputes.map((d) => d.orderId)
+        );
+
+        const sellers = await prisma.user.findMany({
             where: {
                 rank: {
                     in: ["PRO", "PREMIUM", "ENTERPRISE", "ADMIN"],
@@ -323,19 +331,68 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
             select: {
                 username: true,
                 vendorBalance: true,
-                shops: { select: { shopName: true } },
+                customSplit: true,
+                rank: true,
+                shops: {
+                    select: {
+                        shopName: true,
+                        products: {
+                            select: {
+                                id: true,
+                                orders: {
+                                    select: {
+                                        id: true,
+                                        pricePaid: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
-            orderBy: { vendorBalance: "desc" },
-            take: 8,
         });
-        const topStores = topStoresRaw.map((u) => ({
-            username: u.username,
-            vendorBalance: u.vendorBalance,
-            storeName:
-                u.shops && u.shops.length > 0
-                    ? u.shops[0].shopName
-                    : u.username + "'s Realm",
-        }));
+
+        const sellersWithEarnings = sellers.map((u) => {
+            const splitMultiplier =
+                u.customSplit !== null
+                    ? u.customSplit
+                    : (u.rank === "ENTERPRISE" || u.rank === "ADMIN")
+                      ? 0.75
+                      : u.rank === "PREMIUM"
+                        ? 0.6
+                        : 0.5;
+
+            let totalEarnings = 0;
+            if (u.shops && u.shops.length > 0) {
+                for (const shop of u.shops) {
+                    if (shop.products) {
+                        for (const product of shop.products) {
+                            if (product.orders) {
+                                for (const order of product.orders) {
+                                    if (!allRefundedOrderIds.has(order.id)) {
+                                        totalEarnings += order.pricePaid * splitMultiplier;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return {
+                username: u.username,
+                vendorBalance: u.vendorBalance,
+                totalEarnings: Number(totalEarnings.toFixed(2)),
+                storeName:
+                    u.shops && u.shops.length > 0
+                        ? u.shops[0].shopName
+                        : u.username + "'s Realm",
+            };
+        });
+
+        sellersWithEarnings.sort((a, b) => b.totalEarnings - a.totalEarnings);
+        const topStores = sellersWithEarnings.slice(0, 10);
+
 
         res.json(
             enterpriseResponse.dashboard({
