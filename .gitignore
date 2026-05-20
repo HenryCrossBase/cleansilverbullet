@@ -1,0 +1,13 @@
+.env
+node_modules/
+.next/
+dist/
+build/
+uploads/
+*.log
+.DS_Store
+*.zip
+*.tar.gz
+backend/keys/
+webapp_export.txt
+index.py

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <!-- Background Glow -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#050505" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="silver-metal" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="25%" stop-color="#e2e8f0"/>
+      <stop offset="50%" stop-color="#94a3b8"/>
+      <stop offset="80%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+    <linearGradient id="green-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base Dark Layer -->
+  <circle cx="100" cy="100" r="95" fill="#020617" stroke="#1e293b" stroke-width="4"/>
+  
+  <!-- Outer Energy Ring -->
+  <circle cx="100" cy="100" r="80" fill="url(#glow)" stroke="url(#green-accent)" stroke-width="3" stroke-dasharray="25 15" transform="rotate(20 100 100)"/>
+  
+  <!-- Secondary Ring -->
+  <circle cx="100" cy="100" r="65" fill="none" stroke="#334155" stroke-width="1"/>
+
+  <!-- The Bullet Casing -->
+  <g transform="translate(0, 10)">
+     <!-- Casing Base Line -->
+     <rect x="80" y="125" width="40" height="8" rx="2" fill="#10b981"/>
+     
+     <!-- Lower Chamber -->
+     <path d="M 82 125 L 82 90 L 118 90 L 118 125 Z" fill="url(#silver-metal)"/>
+     
+     <!-- Upper Taper / Head -->
+     <path d="M 82 90 C 82 70, 95 40, 100 35 C 105 40, 118 70, 118 90 Z" fill="url(#silver-metal)"/>
+     
+     <!-- Deep Base Ring -->
+     <rect x="76" y="133" width="48" height="6" rx="1" fill="#334155"/>
+     
+     <!-- Neon Chamber Groove -->
+     <rect x="82" y="115" width="36" height="3" fill="#020617"/>
+     <rect x="85" y="116" width="30" height="1" fill="#10b981"/>
+  </g>
+
+  <!-- Futuristic Inner Track Lines -->
+  <path d="M 50 100 L 70 100" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 150 100 L 130 100" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- S B Typography Embedded (Optional depending on scale) -->
+  <text x="100" y="165" font-family="monospace" font-size="14" fill="#64748b" text-anchor="middle" font-weight="bold" letter-spacing="4">BLT</text>
+  <circle cx="100" cy="178" r="3" fill="#10b981"/>
+</svg>

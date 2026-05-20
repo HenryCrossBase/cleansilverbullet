@@ -1,0 +1,405 @@
+/* ============================================================
+   ANIMATIONS & KINETIC TEXT EFFECTS
+   ============================================================ */
+
+.glow-text {
+    text-shadow: none;
+}
+
+/* --- Named text effects --- */
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
+}
+.effect-flying {
+    display: inline-block;
+    animation: float 3s ease-in-out infinite;
+}
+
+.effect-3d {
+    display: inline-block;
+    transform: perspective(300px) rotateX(10deg) rotateY(-10deg);
+    text-shadow:
+        2px 2px 0px rgba(0, 0, 0, 0.5),
+        1px 1px 5px currentColor !important;
+    transition: transform 0.3s;
+}
+.effect-3d:hover {
+    transform: perspective(300px) rotateX(0deg) rotateY(0deg);
+}
+
+@keyframes glitch-anim {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    10% {
+        opacity: 0.8;
+        transform: translateX(-1px);
+    }
+    20% {
+        opacity: 1;
+        transform: translateX(1px);
+    }
+    80% {
+        opacity: 0.9;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+.effect-typing {
+    position: relative;
+    display: inline-block;
+    animation: glitch-anim 2s infinite;
+}
+.effect-typing::after {
+    content: "|";
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
+}
+@keyframes blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+@keyframes neon-breathe {
+    0%,
+    100% {
+        text-shadow:
+            0 0 5px currentColor,
+            0 0 10px currentColor,
+            0 0 20px currentColor;
+    }
+    50% {
+        text-shadow:
+            0 0 2px currentColor,
+            0 0 5px currentColor;
+    }
+}
+.effect-neon {
+    display: inline-block;
+    animation: neon-breathe 2s ease-in-out infinite;
+}
+
+@keyframes shake-anim {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-1px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(1px);
+    }
+}
+.effect-shake {
+    display: inline-block;
+    animation: shake-anim 10s infinite;
+}
+.effect-shake:hover {
+    animation: shake-anim 0.5s infinite;
+}
+
+@keyframes rgb-wave {
+    0% {
+        filter: hue-rotate(0deg);
+    }
+    100% {
+        filter: hue-rotate(360deg);
+    }
+}
+.effect-rgb {
+    display: inline-block;
+    animation: rgb-wave 4s linear infinite;
+}
+
+@keyframes strobe {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+.effect-flash {
+    display: inline-block;
+    animation: strobe 1.5s step-start infinite;
+}
+
+@keyframes hologram-scan {
+    0% {
+        opacity: 1;
+        text-shadow: 0 0 5px currentColor;
+        transform: skew(0deg);
+    }
+    10% {
+        opacity: 0.7;
+        transform: skew(2deg);
+    }
+    20% {
+        opacity: 1;
+        text-shadow:
+            2px 0 0 rgba(255, 0, 0, 0.5),
+            -2px 0 0 rgba(0, 255, 255, 0.5);
+    }
+    30% {
+        transform: skew(0deg);
+        text-shadow: 0 0 5px currentColor;
+    }
+    100% {
+        opacity: 1;
+        transform: skew(0deg);
+    }
+}
+.effect-hologram {
+    display: inline-block;
+    position: relative;
+    animation: hologram-scan 3s infinite;
+}
+
+@keyframes liquid-flow {
+    0%,
+    100% {
+        transform: scaleY(1);
+        filter: drop-shadow(0 0 2px currentColor);
+    }
+    50% {
+        transform: scaleY(1.05) translateY(-1px);
+        filter: drop-shadow(0 5px 8px currentColor);
+    }
+}
+.effect-plasma {
+    display: inline-block;
+    animation: liquid-flow 2s ease-in-out infinite;
+}
+
+@keyframes fire-flicker {
+    0% {
+        text-shadow:
+            0 -2px 4px #ff5722,
+            0 -5px 10px #ff9800,
+            0 -10px 20px #ffc107;
+        transform: translateY(0);
+    }
+    50% {
+        text-shadow:
+            0 -3px 6px #ff5722,
+            0 -8px 15px #ff9800,
+            0 -15px 25px #ffc107;
+        transform: translateY(-1px);
+    }
+    100% {
+        text-shadow:
+            0 -1px 3px #ff5722,
+            0 -4px 8px #ff9800,
+            0 -8px 15px #ffc107;
+        transform: translateY(0);
+    }
+}
+.effect-fire {
+    display: inline-block;
+    animation: fire-flicker 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes radioactive-dust-particles {
+    0% {
+        text-shadow:
+            0 0 15px currentColor,
+            2px -3px 0px currentColor,
+            -4px 2px 1px currentColor,
+            5px 5px 0px currentColor,
+            -3px -4px 1px currentColor,
+            6px -1px 0px currentColor,
+            -5px 6px 1px currentColor;
+    }
+    50% {
+        text-shadow:
+            0 0 25px currentColor,
+            4px -8px 2px transparent,
+            -8px 5px 2px transparent,
+            10px 12px 2px transparent,
+            -6px -10px 2px transparent,
+            12px -3px 2px transparent,
+            -10px 14px 2px transparent;
+    }
+    100% {
+        text-shadow:
+            0 0 15px currentColor,
+            -2px -5px 1px currentColor,
+            3px 4px 0px currentColor,
+            -6px -2px 1px currentColor,
+            4px 6px 0px currentColor,
+            -4px 1px 1px currentColor,
+            5px -4px 0px currentColor;
+    }
+}
+.effect-radioactive-dust {
+    display: inline-block;
+    animation: radioactive-dust-particles 1.5s cubic-bezier(0.4, 0, 0.2, 1)
+        infinite alternate;
+}
+
+@keyframes void-walker-glitch {
+    0% {
+        transform: skewX(0deg);
+        text-shadow:
+            0 0 10px currentColor,
+            2px 0 0 rgba(255, 255, 255, 0.4),
+            -2px 0 0 currentColor;
+    }
+    5% {
+        transform: skewX(-15deg);
+        text-shadow:
+            0 0 20px currentColor,
+            -5px 0 0px currentColor,
+            5px 0 0px rgba(255, 255, 255, 0.8);
+    }
+    10% {
+        transform: skewX(10deg);
+        text-shadow:
+            0 0 5px currentColor,
+            3px 2px 0px rgba(255, 255, 255, 0.6),
+            -3px -2px 0px currentColor;
+    }
+    15% {
+        transform: skewX(0deg);
+        text-shadow: 0 0 10px currentColor;
+    }
+    100% {
+        transform: skewX(0deg);
+        text-shadow: 0 0 20px currentColor;
+    }
+}
+.effect-void-walker {
+    display: inline-block;
+    animation: void-walker-glitch 3s infinite;
+}
+
+/* --- Kinetic text effects --- */
+.kinetic-char-wave {
+    display: inline-block;
+    animation: kineticWave 1.5s infinite ease-in-out;
+}
+@keyframes kineticWave {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.kinetic-elastic {
+    display: inline-block;
+    animation: kineticElastic 4s infinite ease-in-out;
+}
+@keyframes kineticElastic {
+    0%,
+    100% {
+        letter-spacing: normal;
+    }
+    50% {
+        letter-spacing: 0.5em;
+    }
+}
+
+.kinetic-ghost {
+    position: relative;
+    display: inline-block;
+    animation: kineticGhostShift 3s infinite steps(2);
+}
+.kinetic-ghost::before,
+.kinetic-ghost::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.8;
+    z-index: -1;
+}
+.kinetic-ghost::before {
+    color: #f00;
+    animation: kineticGhostL 2.5s infinite linear alternate-reverse;
+}
+.kinetic-ghost::after {
+    color: #0ff;
+    animation: kineticGhostR 2s infinite linear alternate-reverse;
+}
+@keyframes kineticGhostL {
+    0% {
+        transform: translate(-2px, 0);
+    }
+    100% {
+        transform: translate(3px, 1px);
+    }
+}
+@keyframes kineticGhostR {
+    0% {
+        transform: translate(2px, 1px);
+    }
+    100% {
+        transform: translate(-3px, -1px);
+    }
+}
+@keyframes kineticGhostShift {
+    0% {
+        transform: skew(0deg);
+    }
+    20% {
+        transform: skew(-5deg);
+    }
+    21% {
+        transform: skew(5deg);
+    }
+    25% {
+        transform: skew(0deg);
+    }
+}
+
+.kinetic-typewriter {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 0.15em solid hsl(var(--primary));
+    animation:
+        kineticTyping 3.5s steps(var(--chars), end) infinite alternate,
+        kineticBlinkCaret 0.75s step-end infinite;
+}
+@keyframes kineticTyping {
+    from {
+        width: 0;
+    }
+    to {
+        width: 100%;
+    }
+}
+@keyframes kineticBlinkCaret {
+    from,
+    to {
+        border-color: transparent;
+    }
+    50% {
+        border-color: hsl(var(--primary));
+    }
+}

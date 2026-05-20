@@ -1,0 +1,58 @@
+{
+  "auth": {
+    "welcome": "欢迎来到 Silverbullet",
+    "premier": "首屈一指的地下市场与论坛。",
+    "networkUptime": "网络运行时间",
+    "activeSupport": "活跃支持",
+    "activeMembers": "活跃成员",
+    "wideVariety": "种类繁多的高级数字商品",
+    "wideVarietyDesc": "访问超过1,000个已验证的帐户、专有数据库、工具、配置和严格的软件解决方案，直接来自经过严格审查的供应商。非常适合要求绝对匿名且不妥协质量的用户。",
+    "instantSecure": "即时安全的托管交易",
+    "instantSecureDesc": "使用加密货币在我们坚固的托管环境中无缝购买商品。确保在您独立验证交付有效负载之前，您的资金被安全持有。",
+    "growNetwork": "扩展您的网络",
+    "growNetworkDesc": "在我们受保护的地下中心内，与顶级开发人员、逆向工程师和供应商参与安全、高水准的讨论。",
+    "ironclad": "⚠️ 严密的网络政策",
+    "ironcladDesc": "Silverbullet 基于绝对信任和运营安全（OpSec）的严格基础运作。我们执行针对欺诈、盗窃或其他平台成员的零容忍政策。所有交易方都受到生态系统规则的约束——违规者将面临立即且永久的网络黑名单。",
+    "header": "Silverbullet",
+    "login": {
+      "subtitle": "验证您的会话",
+      "email": "电子邮件地址",
+      "password": "密码",
+      "remember": "记住我",
+      "forgot": "忘记密码？",
+      "button": "访问门户",
+      "verifying": "验证中...",
+      "noAccount": "没有帐户？",
+      "registerLink": "注册"
+    },
+    "register": {
+      "subtitle": "加入 Silverbullet 生态系统",
+      "username": "用户名",
+      "email": "电子邮件地址",
+      "masterPassword": "主密码",
+      "autoGenerate": "🎲 自动生成",
+      "confirmPassword": "确认密码",
+      "tos": "我确认我已经阅读并同意服务条款。",
+      "button": "建立连接",
+      "connecting": "连接中...",
+      "hasAccount": "已经有帐户？",
+      "loginLink": "登录"
+    }
+  },
+  "nav": {
+    "login": "登录",
+    "register": "注册",
+    "home": "主页",
+    "market": "市场",
+    "configs": "配置",
+    "customRequests": "定制请求",
+    "upgrade": "升级状态",
+    "myAccount": "我的帐户导航",
+    "profile": "我的档案",
+    "depositHistory": "存款历史",
+    "purchases": "我的购买",
+    "sellerDashboard": "卖家仪表板",
+    "support": "支持凭单",
+    "logout": "登出"
+  }
+}

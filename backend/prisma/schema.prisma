@@ -1,0 +1,347 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model AdminConfig {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  fileName    String
+  fileSize    Int
+  adminName   String   @default("Silverbullet Core")
+  createdAt   DateTime @default(now())
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  rank         String   @default("USER") 
+  credits      Int      @default(0) 
+  vendorBalance Float   @default(0) 
+  avatarUrl    String   @default("/default-avatar.png")
+  bio          String   @default("No biography provided.") 
+  createdAt    DateTime @default(now())
+  lastOnline   DateTime @default(now())
+  
+  hasBlueBadge   Boolean   @default(false)
+  blueBadgeExpiry DateTime?
+  hasSoftwareLicense Boolean @default(false)
+  nameColor      String    @default("#ffffff")
+  nameEffect     String    @default("none")
+  colorPassExpiry DateTime?
+  customBadges   String?   
+
+  bannedUntil    DateTime?
+  banReason      String?
+  casesClosed    Int       @default(0)
+  
+  adminLevel     Int       @default(3) 
+  adminRoles     String?
+  customSplit    Float?    
+  
+  twoFactorSecret String?
+  twoFactorEnabled Boolean @default(false)
+
+  telegramChatId    String?
+  telegramLinkToken String?  @unique
+
+  shops        Shop[]
+  ads          Advertisement[]
+  withdrawals  Withdrawal[]
+  customRequests CustomRequest[]
+
+  @@index([rank, lastOnline])
+  @@index([telegramChatId])
+}
+
+model Shop {
+  id              String    @id @default(uuid())
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id])
+  shopName        String
+  shopDescription String
+  avatarUrl       String?
+  bannerUrl       String?
+  storeColor      String?
+  storeEffect     String?
+  isTrusted       Boolean   @default(false)
+  views           Int       @default(0)
+  marketBid       Float     @default(0)
+  bidExpiresAt    DateTime?
+  createdAt       DateTime  @default(now())
+  products        Product[]
+  tickets         Ticket[]
+
+  @@index([ownerId])
+  @@index([marketBid, views])
+  @@index([bidExpiresAt])
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  productName String
+  description String
+  price       Int      
+  stock       Int      @default(999)
+  category    String   @default("GENERAL") 
+  country     String   @default("Global")  
+  logContent  String   @default("EXTRACTED_LOG_DATA_UNAVAILABLE") 
+  sales       Int      @default(0)
+  marketBid   Float    @default(0)
+  orders      Order[]
+  createdAt   DateTime @default(now())
+
+  @@index([shopId])
+  @@index([category, country])
+  @@index([marketBid, sales, createdAt])
+}
+
+model ConfigRating {
+  id         String   @id @default(uuid())
+  configId   String
+  userId     String
+  score      Int      
+  createdAt  DateTime @default(now())
+
+  @@unique([configId, userId]) 
+}
+
+model ThreadLike {
+  id         String   @id @default(uuid())
+  configId   String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  @@unique([configId, userId]) 
+}
+
+model Order {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  userId      String
+  pricePaid   Int
+  purchasedContent String @default("LOCKED")
+  checkStatus String?
+  checkAttempts Int @default(0)
+  checkCompletedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([productId, createdAt])
+}
+
+model Dispute {
+  id              String   @id @default(uuid())
+  orderId         String   @unique
+  buyerId         String
+  vendorId        String
+  status          String   @default("OPEN") 
+  
+  resolvedById    String?
+  resolvedByName  String?
+  resolvedAt      DateTime?
+
+  messages        DisputeMessage[]
+  
+  createdAt       DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@index([buyerId, createdAt])
+  @@index([vendorId, createdAt])
+}
+
+model DisputeMessage {
+  id        String   @id @default(uuid())
+  disputeId String
+  dispute   Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  senderId  String
+  senderRank String  @default("USER")
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model ProductReview {
+  id          String   @id @default(uuid())
+  productId   String
+  userId      String
+  orderId     String?  
+  score       Int
+  createdAt   DateTime @default(now())
+
+}
+
+model Ticket {
+  id         String   @id @default(uuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  message    String
+  status     String   @default("OPEN")
+  createdAt  DateTime @default(now())
+}
+
+model SupportTicket {
+  id         String   @id @default(uuid())
+  userId     String
+  subject    String
+  status     String   @default("OPEN") 
+  messages   SupportTicketMessage[]
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model SupportTicketMessage {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId  String
+  senderRank String  @default("USER") 
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model CryptoDeposit {
+  id              String   @id @default(uuid())
+  userId          String
+  amountUsd       Float
+  bulletsReceived Int
+  trackId         String?  @unique
+  payLink         String?
+  status          String   @default("PENDING") 
+  purchaseType    String   @default("BULLETS") 
+  purchaseMetadata String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model ProfileLike {
+  id           String   @id @default(uuid())
+  likerId      String
+  targetUserId String
+  createdAt    DateTime @default(now())
+
+  @@unique([likerId, targetUserId])
+}
+
+model Advertisement {
+  id          String   @id @default(uuid())
+  vendorId    String
+  vendor      User     @relation(fields: [vendorId], references: [id])
+  imageUrl    String
+  targetUrl   String
+  slotId      Int      @default(0) 
+  clicks      Int      @default(0)
+  status      String   @default("PENDING_PAYMENT") 
+  expiresAt   DateTime?
+  lockedUntil DateTime? 
+  createdAt   DateTime @default(now())
+
+  @@index([vendorId, createdAt])
+  @@index([slotId, status])
+  @@index([expiresAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  message   String
+  type      String   @default("SYSTEM")
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, read, createdAt])
+}
+
+model Withdrawal {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  amount          Float
+  cryptoAddress   String
+  network         String
+  status          String   @default("PENDING") 
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model CustomRequest {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  description String
+  status      String   @default("PENDING") 
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  adminId       String
+  adminUsername String
+  action        String
+  target        String   @default("N/A")
+  details       String   @default("{}")
+  createdAt     DateTime @default(now())
+
+  @@map("audit_log")
+}
+
+model SystemSettings {
+  id            String   @id @default("global")
+  bannerActive  Boolean  @default(false)
+  bannerMessage String   @default("")
+  bannerColor   String   @default("bg-indigo-600")
+  updatedAt     DateTime @updatedAt
+}
+
+model RDPPlan {
+  id          String   @id @default(uuid())
+  name        String
+  country     String   @default("Global")
+  description String
+  ram         String
+  cpu         String
+  os          String
+  price       Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  orders      RDPOrder[]
+}
+
+model RDPOrder {
+  id          String   @id @default(uuid())
+  buyerId     String
+  sellerId    String
+  planId      String
+  plan        RDPPlan  @relation(fields: [planId], references: [id])
+  status      String   @default("PENDING") // PENDING, ACTIVE, EXPIRED
+  rdpDetails  String?  // Encrypted or JSON string
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([buyerId, status])
+  @@index([sellerId, status])
+  @@index([expiresAt])
+}

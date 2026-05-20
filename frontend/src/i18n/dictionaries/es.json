@@ -1,0 +1,58 @@
+{
+  "auth": {
+    "welcome": "Bienvenido a Silverbullet",
+    "premier": "El Principal Mercado y Foro Clandestino.",
+    "networkUptime": "Tiempo de Actividad",
+    "activeSupport": "Soporte Activo",
+    "activeMembers": "Miembros Activos",
+    "wideVariety": "Gran Variedad de Bienes Digitales Premium",
+    "wideVarietyDesc": "Acceda a más de 1,000 cuentas verificadas, bases de datos exclusivas, herramientas, configuraciones y soluciones de software estrictas directamente de proveedores altamente evaluados. Perfecto para usuarios que exigen absoluto anonimato sin sacrificar la calidad.",
+    "instantSecure": "Transacciones de Depósito Seguro e Instantáneo",
+    "instantSecureDesc": "Compre artículos sin problemas utilizando criptomonedas en nuestro entorno de retención fuertemente fortificado. Asegúrese de que sus fondos se mantengan seguros hasta que verifique de forma independiente la entrega.",
+    "growNetwork": "Haga Crecer Su Red",
+    "growNetworkDesc": "Participe en discusiones seguras y de alto calibre con desarrolladores de primer nivel, ingenieros inversos y proveedores dentro de nuestro centro protegido clandestino.",
+    "ironclad": "⚠️ Políticas de Red Blindadas",
+    "ironcladDesc": "Silverbullet opera sobre una base estricta de confianza absoluta y Seguridad Operacional (OpSec). Hacemos cumplir una política de Cero Tolerancia contra las estafas o fraudes hacia otros miembros. Todos están obligados a seguir las reglas... los infractores enfrentan la lista negra permanente.",
+    "header": "Silverbullet",
+    "login": {
+      "subtitle": "Autentique su sesión",
+      "email": "Dirección de Correo",
+      "password": "Contraseña",
+      "remember": "Recuérdame",
+      "forgot": "¿Olvidó su contraseña?",
+      "button": "Portal de Acceso",
+      "verifying": "Verificando...",
+      "noAccount": "¿No tiene una cuenta?",
+      "registerLink": "Registrarse"
+    },
+    "register": {
+      "subtitle": "Únase al Ecosistema Silverbullet",
+      "username": "Nombre de usuario",
+      "email": "Dirección de Correo",
+      "masterPassword": "Contraseña Maestra",
+      "autoGenerate": "🎲 Generar Automáticamente",
+      "confirmPassword": "Confirmar Contraseña",
+      "tos": "Verifico que he leído y acepto los Términos de Servicio.",
+      "button": "Establecer Conexión",
+      "connecting": "Conectando...",
+      "hasAccount": "¿Ya tiene una cuenta?",
+      "loginLink": "Iniciar Sesión"
+    }
+  },
+  "nav": {
+    "login": "Iniciar Sesión",
+    "register": "Registrarse",
+    "home": "Inicio",
+    "market": "Mercado",
+    "configs": "Configuraciones",
+    "customRequests": "Solicitudes Personalizadas",
+    "upgrade": "Estado de Mejora",
+    "myAccount": "Navegación de Cuenta",
+    "profile": "Mi Perfil",
+    "depositHistory": "Historial de Depósitos",
+    "purchases": "Mis Compras",
+    "sellerDashboard": "Panel de Vendedor",
+    "support": "Tickets de Soporte",
+    "logout": "Cerrar Sesión"
+  }
+}

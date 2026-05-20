@@ -1,0 +1,823 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --color-background: hsl(var(--background));
+    --color-foreground: hsl(var(--foreground));
+    --color-card: hsl(var(--card));
+    --color-card-foreground: hsl(var(--card-foreground));
+    --color-popover: hsl(var(--popover));
+    --color-popover-foreground: hsl(var(--popover-foreground));
+    --color-primary: hsl(var(--primary));
+    --color-primary-foreground: hsl(var(--primary-foreground));
+    --color-secondary: hsl(var(--secondary));
+    --color-secondary-foreground: hsl(var(--secondary-foreground));
+    --color-muted: hsl(var(--muted));
+    --color-muted-foreground: hsl(var(--muted-foreground));
+    --color-accent: hsl(var(--accent));
+    --color-accent-foreground: hsl(var(--accent-foreground));
+    --color-destructive: hsl(var(--destructive));
+    --color-destructive-foreground: hsl(var(--destructive-foreground));
+    --color-border: hsl(var(--border));
+    --color-input: hsl(var(--input));
+    --color-ring: hsl(var(--ring));
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+}
+
+:root {
+    --radius: 0.5rem;
+    --navbar-height: 4rem;
+    --page-gutter: 1rem;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 3.9%;
+    --sidebar: hsl(0 0% 98%);
+    --sidebar-foreground: hsl(240 5.3% 26.1%);
+    --sidebar-primary: hsl(240 5.9% 10%);
+    --sidebar-primary-foreground: hsl(0 0% 98%);
+    --sidebar-accent: hsl(240 4.8% 95.9%);
+    --sidebar-accent-foreground: hsl(240 5.9% 10%);
+    --sidebar-border: hsl(220 13% 91%);
+    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+.dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5% 40%;
+    --input: 240 5% 40%;
+    --ring: 240 4.9% 83.9%;
+    --sidebar: hsl(240 5.9% 10%);
+    --sidebar-foreground: hsl(240 4.8% 95.9%);
+    --sidebar-primary: hsl(224.3 76.3% 48%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(240 3.7% 15.9%);
+    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+    --sidebar-border: hsl(240 3.7% 15.9%);
+    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+@media (min-width: 768px) {
+    :root {
+        --navbar-height: 4.625rem;
+        --page-gutter: 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    :root {
+        --page-gutter: 2rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border box-border;
+    }
+    html {
+        font-size: 75%;
+    }
+    body {
+        @apply bg-background text-foreground antialiased;
+        overflow-x: clip;
+    }
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+}
+
+@utility container {
+    margin-inline: auto;
+}
+
+@utility page-shell {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+}
+
+@utility page-offset {
+    padding-top: calc(var(--navbar-height) + 1rem);
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    @apply bg-background;
+}
+::-webkit-scrollbar-thumb {
+    @apply bg-secondary rounded;
+}
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+}
+
+.contrast {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 100%;
+}
+
+.pink {
+    --background: 317 30.4% 9.0%;
+    --foreground: 325 77.8% 94.7%;
+    --card: 318 31.2% 12.5%;
+    --card-foreground: 325 77.8% 94.7%;
+    --popover: 318 31.2% 12.5%;
+    --popover-foreground: 325 77.8% 94.7%;
+    --primary: 330 81.2% 60.4%;
+    --primary-foreground: 317 30.4% 9.0%;
+    --secondary: 315 30.3% 17.5%;
+    --secondary-foreground: 325 77.8% 94.7%;
+    --muted: 315 30.3% 17.5%;
+    --muted-foreground: 333 71.4% 50.6%;
+    --accent: 315 30.3% 17.5%;
+    --accent-foreground: 325 77.8% 94.7%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 314 30.1% 24.1%;
+    --input: 314 30.1% 24.1%;
+    --ring: 330 81.2% 60.4%;
+    --sidebar: 318 31.2% 12.5%;
+    --sidebar-foreground: 325 77.8% 94.7%;
+    --sidebar-primary: 330 81.2% 60.4%;
+    --sidebar-primary-foreground: 317 30.4% 9.0%;
+    --sidebar-accent: 315 30.3% 17.5%;
+    --sidebar-accent-foreground: 325 77.8% 94.7%;
+    --sidebar-border: 314 30.1% 24.1%;
+    --sidebar-ring: 330 81.2% 60.4%;
+}
+
+.custom {
+    --background: 280 30% 10%;
+    --foreground: 280 20% 90%;
+    --card: 280 30% 15%;
+    --card-foreground: 280 20% 90%;
+    --popover: 280 30% 15%;
+    --popover-foreground: 280 20% 90%;
+    --primary: var(--custom-primary, 280 80% 60%);
+    --primary-foreground: 0 0% 100%;
+    --secondary: 280 30% 25%;
+    --secondary-foreground: 280 20% 90%;
+    --muted: 280 30% 25%;
+    --muted-foreground: 280 10% 60%;
+    --accent: 280 30% 25%;
+    --accent-foreground: 280 20% 90%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: var(--custom-primary, 280 30% 30%);
+    --input: 280 30% 30%;
+    --ring: var(--custom-primary, 280 80% 60%);
+    --sidebar: 280 30% 15%;
+    --sidebar-foreground: 280 20% 90%;
+    --sidebar-primary: var(--custom-primary, 280 80% 60%);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 280 30% 25%;
+    --sidebar-accent-foreground: 280 20% 90%;
+    --sidebar-border: var(--custom-primary, 280 30% 30%);
+    --sidebar-ring: var(--custom-primary, 280 80% 60%);
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+} 
+
+.effect-flying {
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+}
+.effect-3d {
+  display: inline-block;
+  transform: perspective(300px) rotateX(10deg) rotateY(-10deg);
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5), 1px 1px 5px currentColor !important;
+  transition: transform 0.3s;
+}
+.effect-3d:hover {
+  transform: perspective(300px) rotateX(0deg) rotateY(0deg);
+}
+.effect-typing {
+  position: relative;
+  display: inline-block;
+  animation: glitch-anim 2s infinite;
+}
+.effect-typing::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+.effect-neon {
+  display: inline-block;
+  animation: neon-breathe 2s ease-in-out infinite;
+}
+.effect-shake {
+  display: inline-block;
+  animation: shake-anim 10s infinite;
+}
+.effect-shake:hover {
+  animation: shake-anim 0.5s infinite;
+}
+.effect-rgb {
+  display: inline-block;
+  animation: rgb-wave 4s linear infinite;
+}
+.effect-flash {
+  display: inline-block;
+  animation: strobe 1.5s step-start infinite;
+}
+.effect-hologram {
+  display: inline-block;
+  position: relative;
+  animation: hologram-scan 3s infinite;
+}
+.effect-plasma {
+  display: inline-block;
+  animation: liquid-flow 2s ease-in-out infinite;
+}
+.effect-fire {
+  display: inline-block;
+  animation: fire-flicker 0.4s ease-in-out infinite alternate;
+}
+.effect-radioactive-dust {
+  display: inline-block;
+  animation: radioactive-dust-particles 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+.effect-void-walker {
+  display: inline-block;
+  animation: void-walker-glitch 3s infinite;
+}
+@keyframes pulse-glow {
+  0% {}
+
+  50% {}
+
+  100% {}
+}
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes glitch-anim {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  10% {
+    opacity: 0.8;
+    transform: translateX(-1px);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateX(1px);
+  }
+
+  80% {
+    opacity: 0.9;
+    transform: translateX(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes neon-breathe {
+
+  0%,
+  100% {
+    text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 20px currentColor;
+  }
+
+  50% {
+    text-shadow: 0 0 2px currentColor, 0 0 5px currentColor;
+  }
+}
+@keyframes shake-anim {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-1px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(1px);
+  }
+}
+@keyframes rgb-wave {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+@keyframes strobe {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes hologram-scan {
+  0% {
+    opacity: 1;
+    text-shadow: 0 0 5px currentColor;
+    transform: skew(0deg);
+  }
+
+  10% {
+    opacity: 0.7;
+    transform: skew(2deg);
+  }
+
+  20% {
+    opacity: 1;
+    text-shadow: 2px 0 0 rgba(255, 0, 0, 0.5), -2px 0 0 rgba(0, 255, 255, 0.5);
+  }
+
+  30% {
+    transform: skew(0deg);
+    text-shadow: 0 0 5px currentColor;
+  }
+
+  100% {
+    opacity: 1;
+    transform: skew(0deg);
+  }
+}
+@keyframes liquid-flow {
+
+  0%,
+  100% {
+    transform: scaleY(1);
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+
+  50% {
+    transform: scaleY(1.05) translateY(-1px);
+    filter: drop-shadow(0 5px 8px currentColor);
+  }
+}
+@keyframes fire-flicker {
+  0% {
+    text-shadow: 0 -2px 4px #ff5722, 0 -5px 10px #ff9800, 0 -10px 20px #ffc107;
+    transform: translateY(0);
+  }
+
+  50% {
+    text-shadow: 0 -3px 6px #ff5722, 0 -8px 15px #ff9800, 0 -15px 25px #ffc107;
+    transform: translateY(-1px);
+  }
+
+  100% {
+    text-shadow: 0 -1px 3px #ff5722, 0 -4px 8px #ff9800, 0 -8px 15px #ffc107;
+    transform: translateY(0);
+  }
+}
+@keyframes radioactive-dust-particles {
+  0% {
+    text-shadow:
+      0 0 15px currentColor,
+      2px -3px 0px currentColor,
+      -4px 2px 1px currentColor,
+      5px 5px 0px currentColor,
+      -3px -4px 1px currentColor,
+      6px -1px 0px currentColor,
+      -5px 6px 1px currentColor;
+  }
+
+  50% {
+    text-shadow:
+      0 0 25px currentColor,
+      4px -8px 2px transparent,
+      -8px 5px 2px transparent,
+      10px 12px 2px transparent,
+      -6px -10px 2px transparent,
+      12px -3px 2px transparent,
+      -10px 14px 2px transparent;
+  }
+
+  100% {
+    text-shadow:
+      0 0 15px currentColor,
+      -2px -5px 1px currentColor,
+      3px 4px 0px currentColor,
+      -6px -2px 1px currentColor,
+      4px 6px 0px currentColor,
+      -4px 1px 1px currentColor,
+      5px -4px 0px currentColor;
+  }
+}
+@keyframes void-walker-glitch {
+  0% {
+    transform: skewX(0deg);
+    text-shadow: 0 0 10px currentColor, 2px 0 0 rgba(255, 255, 255, 0.4), -2px 0 0 currentColor;
+  }
+
+  5% {
+    transform: skewX(-15deg);
+    text-shadow: 0 0 20px currentColor, -5px 0 0px currentColor, 5px 0 0px rgba(255, 255, 255, 0.8);
+  }
+
+  10% {
+    transform: skewX(10deg);
+    text-shadow: 0 0 5px currentColor, 3px 2px 0px rgba(255, 255, 255, 0.6), -3px -2px 0px currentColor;
+  }
+
+  15% {
+    transform: skewX(0deg);
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  100% {
+    transform: skewX(0deg);
+    text-shadow: 0 0 20px currentColor;
+  }
+}
+@keyframes kineticWave {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes kineticElastic {
+
+  0%,
+  100% {
+    letter-spacing: normal;
+  }
+
+  50% {
+    letter-spacing: 0.5em;
+  }
+}
+@keyframes kineticGhostL {
+  0% {
+    transform: translate(-2px, 0);
+  }
+
+  100% {
+    transform: translate(3px, 1px);
+  }
+}
+@keyframes kineticGhostR {
+  0% {
+    transform: translate(2px, 1px);
+  }
+
+  100% {
+    transform: translate(-3px, -1px);
+  }
+}
+@keyframes kineticGhostShift {
+  0% {
+    transform: skew(0deg);
+  }
+
+  20% {
+    transform: skew(-5deg);
+  }
+
+  21% {
+    transform: skew(5deg);
+  }
+
+  25% {
+    transform: skew(0deg);
+  }
+}
+@keyframes kineticTyping {
+  from { width: 0; }
+  to { width: 100%; }
+}
+@keyframes kineticHue {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+@keyframes strobe {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes hologram-scan {
+  0% {
+    opacity: 1;
+    text-shadow: 0 0 5px currentColor;
+    transform: skew(0deg);
+  }
+
+  10% {
+    opacity: 0.7;
+    transform: skew(2deg);
+  }
+
+  20% {
+    opacity: 1;
+    text-shadow: 2px 0 0 rgba(255, 0, 0, 0.5), -2px 0 0 rgba(0, 255, 255, 0.5);
+  }
+
+  30% {
+    transform: skew(0deg);
+    text-shadow: 0 0 5px currentColor;
+  }
+
+  100% {
+    opacity: 1;
+    transform: skew(0deg);
+  }
+}
+@keyframes liquid-flow {
+
+  0%,
+  100% {
+    transform: scaleY(1);
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+
+  50% {
+    transform: scaleY(1.05) translateY(-1px);
+    filter: drop-shadow(0 5px 8px currentColor);
+  }
+}
+@keyframes fire-flicker {
+  0% {
+    text-shadow: 0 -2px 4px #ff5722, 0 -5px 10px #ff9800, 0 -10px 20px #ffc107;
+    transform: translateY(0);
+  }
+
+  50% {
+    text-shadow: 0 -3px 6px #ff5722, 0 -8px 15px #ff9800, 0 -15px 25px #ffc107;
+    transform: translateY(-1px);
+  }
+
+  100% {
+    text-shadow: 0 -1px 3px #ff5722, 0 -4px 8px #ff9800, 0 -8px 15px #ffc107;
+    transform: translateY(0);
+  }
+}
+@keyframes radioactive-dust-particles {
+  0% {
+    text-shadow:
+      0 0 15px currentColor,
+      2px -3px 0px currentColor,
+      -4px 2px 1px currentColor,
+      5px 5px 0px currentColor,
+      -3px -4px 1px currentColor,
+      6px -1px 0px currentColor,
+      -5px 6px 1px currentColor;
+  }
+
+  50% {
+    text-shadow:
+      0 0 25px currentColor,
+      4px -8px 2px transparent,
+      -8px 5px 2px transparent,
+      10px 12px 2px transparent,
+      -6px -10px 2px transparent,
+      12px -3px 2px transparent,
+      -10px 14px 2px transparent;
+  }
+
+  100% {
+    text-shadow:
+      0 0 15px currentColor,
+      -2px -5px 1px currentColor,
+      3px 4px 0px currentColor,
+      -6px -2px 1px currentColor,
+      4px 6px 0px currentColor,
+      -4px 1px 1px currentColor,
+      5px -4px 0px currentColor;
+  }
+}
+@keyframes void-walker-glitch {
+  0% {
+    transform: skewX(0deg);
+    text-shadow: 0 0 10px currentColor, 2px 0 0 rgba(255, 255, 255, 0.4), -2px 0 0 currentColor;
+  }
+
+  5% {
+    transform: skewX(-15deg);
+    text-shadow: 0 0 20px currentColor, -5px 0 0px currentColor, 5px 0 0px rgba(255, 255, 255, 0.8);
+  }
+
+  10% {
+    transform: skewX(10deg);
+    text-shadow: 0 0 5px currentColor, 3px 2px 0px rgba(255, 255, 255, 0.6), -3px -2px 0px currentColor;
+  }
+
+  15% {
+    transform: skewX(0deg);
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  100% {
+    transform: skewX(0deg);
+    text-shadow: 0 0 20px currentColor;
+  }
+}
+@keyframes kineticWave {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes kineticElastic {
+
+  0%,
+  100% {
+    letter-spacing: normal;
+  }
+
+  50% {
+    letter-spacing: 0.5em;
+  }
+}
+@keyframes kineticGhostL {
+  0% {
+    transform: translate(-2px, 0);
+  }
+
+  100% {
+    transform: translate(3px, 1px);
+  }
+}
+@keyframes kineticGhostR {
+  0% {
+    transform: translate(2px, 1px);
+  }
+
+  100% {
+    transform: translate(-3px, -1px);
+  }
+}
+@keyframes kineticGhostShift {
+  0% {
+    transform: skew(0deg);
+  }
+
+  20% {
+    transform: skew(-5deg);
+  }
+
+  21% {
+    transform: skew(5deg);
+  }
+
+  25% {
+    transform: skew(0deg);
+  }
+}
+@keyframes kineticTyping {
+  from {
+    width: 0
+  }
+
+  to {
+    width: 100%
+  }
+}
+@keyframes kineticBlinkCaret {
+
+  from,
+  to {
+    border-color: transparent
+  }
+
+  50% {
+    border-color: var(--accent-green);
+  }
+}
+
+@media (max-width: 768px) {
+    .mobile-stack {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+    .mobile-stack > div, .mobile-stack > form, .mobile-stack > h1 {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    .mobile-profile-pad {
+        padding: 1.5rem !important;
+        gap: 2rem !important;
+    }
+    .mobile-grid-1 {
+        grid-template-columns: 1fr !important;
+    }
+    .responsive-title {
+        font-size: 1.75rem !important;
+        line-height: 1.2 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+    }
+}

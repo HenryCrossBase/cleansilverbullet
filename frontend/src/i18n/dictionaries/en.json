@@ -1,0 +1,58 @@
+{
+  "auth": {
+    "welcome": "Welcome to Silverbullet",
+    "premier": "The Premier Underground Marketplace & Forum.",
+    "networkUptime": "Network Uptime",
+    "activeSupport": "Active Support",
+    "activeMembers": "Active Members",
+    "wideVariety": "Wide Variety of Premium Digital Goods",
+    "wideVarietyDesc": "Access over 1,000+ verified accounts, exclusive databases, tools, configurations, and strict software solutions directly from highly vetted vendors. Perfect for users demanding absolute anonymity without sacrificing quality.",
+    "instantSecure": "Instant Secure Escrow Transactions",
+    "instantSecureDesc": "Seamlessly purchase items using cryptocurrency with our heavily fortified escrow environment. Ensure your funds are securely held until you independently verify the delivery payload.",
+    "growNetwork": "Grow Your Network",
+    "growNetworkDesc": "Engage in secure, high-caliber discussions with top-tier developers, reverse engineers, and vendors inside our protected underground hub.",
+    "ironclad": "⚠️ Ironclad Network Policies",
+    "ironcladDesc": "Silverbullet operates on a strict basis of absolute trust and Operational Security (OpSec). We enforce a Zero-Tolerance policy against scamming, ripping, or defrauding other platform members. All transacting parties are bound by the ecosystem's rules—violators face immediate and permanent network blacklisting.",
+    "header": "Silverbullet",
+    "login": {
+      "subtitle": "Authenticate your session",
+      "email": "Email Address",
+      "password": "Password",
+      "remember": "Remember me",
+      "forgot": "Forgot Password?",
+      "button": "Login",
+      "verifying": "Verifying...",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Register"
+    },
+    "register": {
+      "subtitle": "Join the Silverbullet Ecosystem",
+      "username": "Username",
+      "email": "Email Address",
+      "masterPassword": "Master Password",
+      "autoGenerate": "🎲 Auto Generate",
+      "confirmPassword": "Confirm Password",
+      "tos": "I verify that I have read and agree to the Silverbullet Terms of Service.",
+      "button": "Register",
+      "connecting": "Connecting...",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Log In"
+    }
+  },
+  "nav": {
+    "login": "Log In",
+    "register": "Register",
+    "home": "Home",
+    "market": "Market Place",
+    "configs": "Configs",
+    "customRequests": "Custom Requests",
+    "upgrade": "Upgrade Status",
+    "myAccount": "My Account Navigation",
+    "profile": "My Profile",
+    "depositHistory": "Deposit History",
+    "purchases": "My Purchases",
+    "sellerDashboard": "Seller Dashboard",
+    "support": "Support Tickets",
+    "logout": "Log Out"
+  }
+}
