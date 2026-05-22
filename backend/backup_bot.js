@@ -82,8 +82,12 @@ async function executeBackup(triggerChatId = CHAT_ID) {
     });
 }
 
-// Interactive Commands
+const isAuthorizedChat = (chatId) => String(chatId) === String(CHAT_ID);
+
 bot.onText(/\/start/, (msg) => {
+    if (!isAuthorizedChat(msg.chat.id)) {
+        return; // silent drop — don't even ack so we don't confirm the bot exists
+    }
     bot.sendMessage(msg.chat.id, "🛡️ <b>Silverbullet Database Backup</b>\n\nI automatically upload encrypted snapshots of your database every 60 minutes.", {
         parse_mode: 'HTML',
         reply_markup: {
@@ -94,6 +98,10 @@ bot.onText(/\/start/, (msg) => {
 
 // Handle Button Clicks
 bot.on('callback_query', (query) => {
+    if (!isAuthorizedChat(query.message.chat.id)) {
+        bot.answerCallbackQuery(query.id, { text: "Not authorized", show_alert: true }).catch(() => {});
+        return;
+    }
     if (query.data === 'INSTANT_BACKUP') {
         bot.answerCallbackQuery(query.id);
         executeBackup(query.message.chat.id);

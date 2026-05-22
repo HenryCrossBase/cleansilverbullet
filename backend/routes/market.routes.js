@@ -573,90 +573,102 @@ router.post(
             const productId = req.params.productId;
             const buyerId = req.user.id;
             const amount = parseInt(req.body.amount, 10) || 1;
-
-            const product = await prisma.product.findUnique({
-                where: { id: productId },
-                include: { shop: { include: { owner: true } } },
-            });
-
-            if (!product)
-                return res
-                    .status(404)
-                    .json({ error: "Payload physically missing." });
-
-            const lines = product.logContent
-                .split("\n")
-                .filter((l) => l.trim() !== "");
-            if (amount > lines.length) {
-                return res.status(400).json({
-                    error: `Not enough stock. Only ${lines.length} lines available.`,
-                });
+            if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+                return res.status(400).json({ error: "Invalid amount." });
             }
 
-            const purchasedLines = lines.slice(0, amount).join("\n");
-            const remainingLines = lines.slice(amount).join("\n");
+            const result = await prisma.$transaction(async (tx) => {
+                const product = await tx.product.findUnique({
+                    where: { id: productId },
+                    include: { shop: { include: { owner: true } } },
+                });
+                if (!product) throw new Error("PRODUCT_MISSING");
 
-            const priceUsd = product.price * amount;
-            const splitRate =
-                product.shop.owner.customSplit !== null
-                    ? product.shop.owner.customSplit
-                    : (product.shop.owner.rank === "ENTERPRISE" || product.shop.owner.rank === "ADMIN")
+                if (product.shop.owner.id === buyerId) {
+                    throw new Error("SELF_TRADE_BLOCKED");
+                }
+
+                const lines = product.logContent
+                    .split("\n")
+                    .filter((l) => l.trim() !== "");
+                if (amount > lines.length) {
+                    throw new Error(`INSUFFICIENT_STOCK:${lines.length}`);
+                }
+
+                const purchasedLines = lines.slice(0, amount).join("\n");
+                const remainingLines = lines.slice(amount).join("\n");
+
+                const priceUsd = product.price * amount;
+                const ownerRank = product.shop.owner.rank;
+                const customSplit = product.shop.owner.customSplit;
+                const splitRate = (customSplit !== null && customSplit >= 0 && customSplit <= 1)
+                    ? customSplit
+                    : (ownerRank === "ENTERPRISE" || ownerRank === "ADMIN")
                       ? 0.75
-                      : product.shop.owner.rank === "PREMIUM"
+                      : ownerRank === "PREMIUM"
                         ? 0.6
                         : 0.5;
-            const vendorRevenue = (priceUsd * splitRate) - ((product.marketBid || 0) * amount);
+                const vendorRevenue = Math.max(0,
+                    (priceUsd * splitRate) - ((product.marketBid || 0) * amount));
 
-            const buyer = await prisma.user.findUnique({
-                where: { id: buyerId },
-            });
-            if (buyer.credits < priceUsd) {
-                return res.status(400).json({ error: "Insufficient Bullets." });
-            }
+                const stockUpdate = await tx.product.updateMany({
+                    where: { id: product.id, stock: { gte: amount } },
+                    data: {
+                        logContent: remainingLines,
+                        stock: { decrement: amount },
+                        sales: { increment: amount },
+                    },
+                });
+                if (stockUpdate.count === 0) throw new Error("INSUFFICIENT_STOCK_RACE");
 
-            await prisma.$transaction([
-                prisma.user.update({
-                    where: { id: buyerId },
+                const buyerUpdate = await tx.user.updateMany({
+                    where: { id: buyerId, credits: { gte: priceUsd } },
                     data: { credits: { decrement: priceUsd } },
-                }),
-                prisma.user.update({
+                });
+                if (buyerUpdate.count === 0) throw new Error("INSUFFICIENT_FUNDS");
+
+                await tx.user.update({
                     where: { id: product.shop.owner.id },
                     data: { vendorBalance: { increment: vendorRevenue } },
-                }),
-                prisma.order.create({
+                });
+
+                await tx.order.create({
                     data: {
                         productId: product.id,
                         userId: buyerId,
                         pricePaid: priceUsd,
                         purchasedContent: purchasedLines,
                     },
-                }),
-                prisma.product.update({
-                    where: { id: product.id },
-                    data: {
-                        logContent: remainingLines,
-                        stock: lines.length - amount,
-                        sales: { increment: amount },
-                    },
-                }),
-            ]);
+                });
+
+                return { product, purchasedLines, amount, vendorRevenue };
+            }, { isolationLevel: "Serializable" });
+
+            const { product, purchasedLines } = result;
 
             if (product.shop.owner.telegramChatId) {
                 await sendVendorTelegramAlert(
                     product.shop.owner.telegramChatId,
-                    `💰 <b>SALE INCOMING!</b>\n\nYou just sold <b>${amount}x ${product.productName}</b>.\nRevenue Generated: <b>${vendorRevenue.toFixed(2)}</b> Bullets.\n\n<a href="${VENDOR_DASHBOARD_URL}">Access Seller Terminal</a>`,
+                    `💰 <b>SALE INCOMING!</b>\n\nYou just sold <b>${result.amount}x ${product.productName}</b>.\nRevenue Generated: <b>${result.vendorRevenue.toFixed(2)}</b> Bullets.\n\n<a href="${VENDOR_DASHBOARD_URL}">Access Seller Terminal</a>`,
                 );
             }
 
             res.json(
                 marketResponse.purchased(
                     "Transaction successful. Log Decrypted.",
-                    {
-                        log: purchasedLines,
-                    },
+                    { log: purchasedLines },
                 ),
             );
         } catch (err) {
+            const msg = err?.message || "";
+            if (msg === "PRODUCT_MISSING") return res.status(404).json({ error: "Payload physically missing." });
+            if (msg === "SELF_TRADE_BLOCKED") return res.status(403).json({ error: "You cannot purchase from your own shop." });
+            if (msg.startsWith("INSUFFICIENT_STOCK:")) {
+                return res.status(400).json({ error: `Not enough stock. Only ${msg.split(":")[1]} lines available.` });
+            }
+            if (msg === "INSUFFICIENT_STOCK_RACE") return res.status(400).json({ error: "Stock depleted." });
+            if (msg === "INSUFFICIENT_FUNDS") return res.status(400).json({ error: "Insufficient Bullets." });
+            logger.error("Purchase error:", err);
             res.status(500).json({ error: "Transaction array failed." });
         }
     },

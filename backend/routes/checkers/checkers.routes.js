@@ -30,28 +30,43 @@ router.post("/pof", async (req, res) => {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
-        // Security 1: Rate limiting per user (Max 3 checks per minute)
+        const product = await prisma.product.findUnique({
+            where: { id: productId },
+            select: {
+                logContent: true,
+                shop: { select: { ownerId: true } },
+            },
+        });
+        if (!product || !product.logContent) {
+            return res.status(404).json({ error: "Product not found or empty" });
+        }
+        const isVendor = product.shop?.ownerId === req.user.id;
+        if (!isVendor) {
+            const owned = await prisma.order.findFirst({
+                where: { productId, userId: req.user.id },
+                select: { id: true },
+            });
+            if (!owned) {
+                return res.status(403).json({ error: "You must purchase this product before checking it." });
+            }
+        }
+
+        // Rate limiting per user (Max 3 checks per minute)
         const userLimitKey = `check_limit_${req.user.id}`;
         const currentChecks = (await redis.getJson(userLimitKey)) || 0;
         if (currentChecks >= 3) {
             return res.status(429).json({ status: "FAIL", message: "Rate limit exceeded. Please wait a minute." });
         }
-        await redis.setJson(userLimitKey, currentChecks + 1, 60); // 60 seconds TTL
+        await redis.setJson(userLimitKey, currentChecks + 1, 60);
 
-        // Security 2: Cache the check result for this product for 5 minutes
-        const cacheKey = `pof_check_${productId}`;
+        // Cache the check result. Key now includes proxy hash so a single bad
+        // proxy can't poison the cached verdict for other callers.
+        const proxyHash = require("crypto").createHash("sha256")
+            .update(`${proxyType}:${proxyString}`).digest("hex").slice(0, 16);
+        const cacheKey = `pof_check_${productId}_${proxyHash}`;
         const cachedResult = await redis.getJson(cacheKey);
         if (cachedResult) {
             return res.json(cachedResult);
-        }
-
-        const product = await prisma.product.findUnique({
-            where: { id: productId },
-            select: { logContent: true }
-        });
-
-        if (!product || !product.logContent) {
-            return res.status(404).json({ error: "Product not found or empty" });
         }
 
         const logContent = product.logContent.trim();
@@ -310,10 +325,18 @@ router.post("/order", async (req, res) => {
                     data: { checkStatus: "INVALID_FINAL", checkAttempts: newAttempts, checkCompletedAt: new Date() }
                 });
                 
+                const escapeHtml = (s) => String(s)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#x27;");
+                const safeOrderId = escapeHtml(order.id);
+                const safeLog = escapeHtml(logContent).slice(0, 500);
                 const admins = await prisma.user.findMany({ where: { rank: "ADMIN" } });
                 const notifs = admins.map(a => ({
                     userId: a.id,
-                    message: `[POF CHECKER] Invalid login detected on Order #${order.id}. Account Details: ${logContent}`,
+                    message: `[POF CHECKER] Invalid login detected on Order #${safeOrderId}. Account Details: ${safeLog}`,
                     type: "SYSTEM",
                     link: `/admin/dashboard`
                 }));

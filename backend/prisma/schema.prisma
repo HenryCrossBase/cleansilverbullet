@@ -50,6 +50,8 @@ model User {
   twoFactorSecret String?
   twoFactorEnabled Boolean @default(false)
 
+  passwordChangedAt DateTime? @db.Timestamptz(3)
+
   telegramChatId    String?
   telegramLinkToken String?  @unique
 

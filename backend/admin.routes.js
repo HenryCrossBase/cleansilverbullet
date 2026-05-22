@@ -650,6 +650,15 @@ router.post(
             if (!user)
                 return res.status(404).json({ error: "User not found." });
 
+            if (user.rank === "ADMIN" && user.id !== req.user.id) {
+                const requesterRoles = parseAdminRoles(req.user.adminRoles);
+                const isOwner = requesterRoles.includes(0);
+                if (!isOwner)
+                    return res.status(403).json({
+                        error: "Only Owners can change another admin's rank.",
+                    });
+            }
+
             await prisma.user.update({
                 where: { id: user.id },
                 data: { rank },
@@ -897,6 +906,7 @@ router.post(
                     email: email.toLowerCase(),
                     passwordHash,
                     rank: "ADMIN",
+                    adminRoles: "1",
                     credits: 999999,
                     nameColor: "#ef4444",
                     hasBlueBadge: true,
@@ -974,11 +984,9 @@ router.post(
             if (!user)
                 return res.status(404).json({ error: "User not found." });
 
-            // Prevent changing another admin's password unless Owner
             if (user.rank === "ADMIN" && user.id !== req.user.id) {
                 const requesterRoles = parseAdminRoles(req.user.adminRoles);
-                const isOwner =
-                    requesterRoles.includes(0) || requesterRoles.length === 0;
+                const isOwner = requesterRoles.includes(0);
                 if (!isOwner)
                     return res.status(403).json({
                         error: "Cannot change another admin's password.",
@@ -988,8 +996,12 @@ router.post(
             const hash = await bcrypt.hash(newPassword, 12);
             await prisma.user.update({
                 where: { id: user.id },
-                data: { passwordHash: hash },
+                data: {
+                    passwordHash: hash,
+                    passwordChangedAt: new Date(),
+                },
             });
+            await invalidateAuthState(user.id);
             await logAudit(
                 req.user.id,
                 req.user.username,
@@ -2191,7 +2203,7 @@ router.get("/me/permissions", async (req, res) => {
     };
     const roleNames =
         roles.length === 0
-            ? ["Owner"]
+            ? ["Unassigned"]
             : roles.map((r) => ROLE_NAMES[r] || `Role ${r}`);
 
     res.json({ success: true, roles, roleNames, permissions });
@@ -2232,22 +2244,28 @@ router.get("/settings/banner", async (req, res) => {
     }
 });
 
-router.put("/settings/banner", async (req, res) => {
+router.put("/settings/banner", requirePermission("upload_config"), async (req, res) => {
     const { active, message, color } = req.body;
+
+    // Constrain shape so we don't store arbitrary tailwind classes or huge strings.
+    const safeColor = /^bg-[a-z]+-\d{3}$/.test(String(color || ""))
+        ? String(color)
+        : "bg-indigo-600";
+    const safeMessage = String(message || "").slice(0, 280);
 
     try {
         const settings = await prisma.systemSettings.upsert({
             where: { id: "global" },
             update: {
                 bannerActive: Boolean(active),
-                bannerMessage: String(message || ""),
-                bannerColor: String(color || "bg-indigo-600"),
+                bannerMessage: safeMessage,
+                bannerColor: safeColor,
             },
             create: {
                 id: "global",
                 bannerActive: Boolean(active),
-                bannerMessage: String(message || ""),
-                bannerColor: String(color || "bg-indigo-600"),
+                bannerMessage: safeMessage,
+                bannerColor: safeColor,
             },
         });
 
@@ -2266,4 +2284,3 @@ router.put("/settings/banner", async (req, res) => {
 });
 
 module.exports = router;
-

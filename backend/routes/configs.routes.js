@@ -122,18 +122,26 @@ const upload = multer({
  *     security:
  *       - bearerAuth: []
  */
+function requireAdminForUpload(req, res, next) {
+    if (!req.user || req.user.rank !== "ADMIN") {
+        return res.status(403).json({ error: "Unauthorized. Admin access required." });
+    }
+    next();
+}
+
 router.post(
     "/create",
     authenticateToken,
+    requireAdminForUpload,
     upload.single("configFile"),
     async (req, res) => {
         try {
-            if (req.user.rank !== "ADMIN") {
-                return res.status(403).json({ error: "Unauthorized. Admin access required." });
-            }
-
             const { title, description } = req.body;
             if (!title || !description || !req.file) {
+                if (req.file) {
+                    // Clean up if any of the other fields were missing.
+                    fs.promises.unlink(req.file.path).catch(() => {});
+                }
                 return res.status(400).json({ error: "Missing required fields or file." });
             }
 
@@ -149,8 +157,10 @@ router.post(
 
             res.status(201).json({ success: true, config: newConfig });
         } catch (err) {
+            if (req.file) fs.promises.unlink(req.file.path).catch(() => {});
             console.error(err);
-            res.status(500).json({ error: err.message || "Failed to create config." });
+            // Generic message — don't leak err.message which can include internal paths.
+            res.status(500).json({ error: "Failed to create config." });
         }
     }
 );

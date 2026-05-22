@@ -311,12 +311,12 @@ export default function Navbar() {
                                                                     n.link;
                                                         }}
                                                     >
-                                                        <div
-                                                            dangerouslySetInnerHTML={{
-                                                                __html: n.message,
-                                                            }}
-                                                            className="leading-snug"
-                                                        />
+                                                        {/* SECURITY FIX: render as text, not HTML. */}
+                                                        {/* dangerouslySetInnerHTML let vendor-controlled */}
+                                                        {/* logContent reach admin browsers as live HTML. */}
+                                                        <div className="leading-snug whitespace-pre-wrap">
+                                                            {n.message}
+                                                        </div>
                                                         <div className="text-xs text-muted-foreground mt-1">
                                                             {new Date(
                                                                 n.createdAt,

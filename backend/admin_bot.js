@@ -212,6 +212,7 @@ bot.on("message", async (msg) => {
                         email: session.email,
                         passwordHash: passwordHash,
                         rank: "ADMIN",
+                        adminRoles: "1",
                         credits: 999999,
                         nameColor: "#ef4444",
                         hasBlueBadge: true,
@@ -618,11 +619,18 @@ bot.on("message", async (msg) => {
             );
         }
         if (session.step === "AWAITING_PERCENT_VAL") {
-            const val =
-                text.trim().toLowerCase() === "clear"
-                    ? null
-                    : parseFloat(text.trim());
+            const raw = text.trim();
+            const val = raw.toLowerCase() === "clear" ? null : parseFloat(raw);
             activeSessions[userId] = null;
+
+            if (val !== null && (!Number.isFinite(val) || val < 0 || val > 1)) {
+                return bot.sendMessage(
+                    chatId,
+                    `<b>[ ERROR ]</b> Split must be between 0.00 and 1.00, or 'clear' to reset.`,
+                    { parse_mode: "HTML" },
+                );
+            }
+
             try {
                 await prisma.user.update({
                     where: { username: session.targetUser },

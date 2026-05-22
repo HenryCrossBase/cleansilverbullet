@@ -229,6 +229,20 @@ router.get(
         try {
             const user = await prisma.user.findUnique({
                 where: { username: req.params.username },
+                select: {
+                    id: true,
+                    username: true,
+                    rank: true,
+                    avatarUrl: true,
+                    bio: true,
+                    createdAt: true,
+                    lastOnline: true,
+                    nameColor: true,
+                    nameEffect: true,
+                    hasBlueBadge: true,
+                    casesClosed: true,
+                    customBadges: true,
+                },
             });
             if (!user)
                 return res.status(404).json({ error: "User not found." });
@@ -238,8 +252,7 @@ router.get(
                 totalThreads: 0,
             };
 
-            const { passwordHash, ...safeUser } = user;
-            res.json(userResponse.profile(safeUser, stats));
+            res.json(userResponse.profile(user, stats));
         } catch (err) {
             res.status(500).json({
                 error: "Failed to compile dossier schema.",
@@ -356,9 +369,19 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+const rateLimit = require("express-rate-limit");
+const changePasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 6,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many password change attempts. Please wait." },
+});
+
 router.post(
     "/change-password",
     authenticateToken,
+    changePasswordLimiter,
     ...validate(userValidators.changePassword),
     async (req, res) => {
         const { oldPassword, newPassword } = req.body;
@@ -394,20 +417,26 @@ router.post(
                     .status(401)
                     .json({ error: "Current Master Key is invalid." });
 
-            if (newPassword.length < 6)
+            const strong = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,64}$/;
+            if (typeof newPassword !== "string" || !strong.test(newPassword)) {
                 return res.status(400).json({
-                    error: "New Master Key must be at least 6 characters.",
+                    error: "Password must be 8-64 chars, with upper, digit, and symbol.",
                 });
+            }
 
             const updatedHash = await argon2.hash(newPassword);
             await prisma.user.update({
                 where: { id: req.user.id },
-                data: { passwordHash: updatedHash },
+                data: {
+                    passwordHash: updatedHash,
+                    passwordChangedAt: new Date(),
+                },
             });
+            await invalidateAuthState(req.user.id);
 
             res.json(
                 userResponse.actionSuccess(
-                    "Security credentials actively rotated.",
+                    "Security credentials actively rotated. All other sessions have been logged out.",
                 ),
             );
         } catch (err) {
@@ -1073,7 +1102,7 @@ router.post(
     authenticateToken,
     ...validate(userValidators.buyCosmetic),
     async (req, res) => {
-        const { type } = req.body; // 'badge' or 'color_pass'
+        const { type } = req.body;
 
         try {
             const user = await prisma.user.findUnique({
@@ -1088,17 +1117,21 @@ router.post(
                     return res.status(400).json({
                         error: "You already own the Verified Badge.",
                     });
-                if (!isAdmin && user.credits < 10)
-                    return res.status(400).json({
-                        error: "Insufficient BLT. Requires 10 BLT.",
+
+                if (!isAdmin) {
+                    const debited = await prisma.user.updateMany({
+                        where: { id: user.id, credits: { gte: 10 }, hasBlueBadge: false },
+                        data: { credits: { decrement: 10 } },
                     });
-
-                const d = { hasBlueBadge: true };
-                if (!isAdmin) d.credits = user.credits - 10;
-
+                    if (debited.count === 0) {
+                        return res.status(400).json({
+                            error: "Insufficient BLT or badge already owned.",
+                        });
+                    }
+                }
                 await prisma.user.update({
                     where: { id: user.id },
-                    data: d,
+                    data: { hasBlueBadge: true },
                 });
                 return res.json(
                     userResponse.actionSuccess(
@@ -1137,11 +1170,6 @@ router.post(
                     ? effect
                     : "none";
 
-                if (!isAdmin && user.credits < 20)
-                    return res.status(400).json({
-                        error: "Insufficient BLT. Requires 20 BLT.",
-                    });
-
                 const now = new Date();
                 if (
                     !isAdmin &&
@@ -1153,19 +1181,35 @@ router.post(
                     });
                 }
 
+                if (!isAdmin) {
+                    // Atomic debit + expiry-still-null/expired guard.
+                    const debited = await prisma.user.updateMany({
+                        where: {
+                            id: user.id,
+                            credits: { gte: 20 },
+                            OR: [
+                                { colorPassExpiry: null },
+                                { colorPassExpiry: { lt: now } },
+                            ],
+                        },
+                        data: { credits: { decrement: 20 } },
+                    });
+                    if (debited.count === 0) {
+                        return res.status(400).json({
+                            error: "Insufficient BLT or pass still active.",
+                        });
+                    }
+                }
+
                 const newExpiry = new Date();
                 newExpiry.setDate(newExpiry.getDate() + 30);
-
-                const d = {
-                    nameColor: hexColor,
-                    nameEffect: secureEffect,
-                    colorPassExpiry: newExpiry,
-                };
-                if (!isAdmin) d.credits = user.credits - 20;
-
                 await prisma.user.update({
                     where: { id: user.id },
-                    data: d,
+                    data: {
+                        nameColor: hexColor,
+                        nameEffect: secureEffect,
+                        colorPassExpiry: newExpiry,
+                    },
                 });
                 return res.json(
                     userResponse.actionSuccess(
@@ -1196,6 +1240,11 @@ router.get("/2fa/generate", authenticateToken, async (req, res) => {
         }
 
         const secret = otplib.generateSecret(20);
+        await prisma.user.update({
+            where: { id: req.user.id },
+            data: { twoFactorSecret: secret, twoFactorEnabled: false },
+        });
+
         const otpauthUrl = otplib.generateURI({ issuer: "Silverbullet", accountName: user.username, secret });
         const qrCodeUrl = await qrcode.toDataURL(otpauthUrl);
 
@@ -1210,13 +1259,25 @@ router.get("/2fa/generate", authenticateToken, async (req, res) => {
 
 router.post("/2fa/enable", authenticateToken, async (req, res) => {
     try {
-        const { code, secret } = req.body;
+        const { code } = req.body;
 
-        if (!code || !secret) {
-            return res.status(400).json({ error: "Missing code or secret." });
+        if (!code) {
+            return res.status(400).json({ error: "Missing code." });
         }
 
-        const isValid = otplib.verifySync({ token: code, secret, window: 1 }).valid;
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { twoFactorSecret: true, twoFactorEnabled: true },
+        });
+        if (!user?.twoFactorSecret || user.twoFactorEnabled) {
+            return res.status(400).json({ error: "Call /2fa/generate first." });
+        }
+
+        const isValid = otplib.verifySync({
+            token: String(code),
+            secret: user.twoFactorSecret,
+            window: 1,
+        }).valid;
 
         if (!isValid) {
             return res.status(400).json({ error: "Invalid 2FA code." });
@@ -1224,10 +1285,7 @@ router.post("/2fa/enable", authenticateToken, async (req, res) => {
 
         await prisma.user.update({
             where: { id: req.user.id },
-            data: {
-                twoFactorSecret: secret,
-                twoFactorEnabled: true,
-            },
+            data: { twoFactorEnabled: true },
         });
 
         res.status(200).json({ success: true, message: "2FA enabled successfully." });
