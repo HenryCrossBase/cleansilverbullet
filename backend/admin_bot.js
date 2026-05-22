@@ -212,7 +212,7 @@ bot.on("message", async (msg) => {
                         email: session.email,
                         passwordHash: passwordHash,
                         rank: "ADMIN",
-                        adminRoles: "3",
+                        adminRoles: "1",
                         credits: 999999,
                         nameColor: "#ef4444",
                         hasBlueBadge: true,

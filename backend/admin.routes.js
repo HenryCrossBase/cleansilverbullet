@@ -906,7 +906,7 @@ router.post(
                     email: email.toLowerCase(),
                     passwordHash,
                     rank: "ADMIN",
-                    adminRoles: "3",
+                    adminRoles: "1",
                     credits: 999999,
                     nameColor: "#ef4444",
                     hasBlueBadge: true,
