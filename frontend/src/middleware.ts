@@ -34,11 +34,14 @@ export async function middleware(request: NextRequest) {
         try {
             const apiBase =
                 process.env.NEXT_PUBLIC_API_PROXY_URL ||
-                process.env.NEXT_PUBLIC_API_BASE_URL ||
-                "";
-            const meRes = await fetch(`${apiBase}/api/user/me`, {
+                process.env.NEXT_PUBLIC_API_BASE_URL;
+            const meUrl = apiBase
+                ? `${apiBase}/api/user/me`
+                : new URL("/api/user/me", request.url).toString();
+            const meRes = await fetch(meUrl, {
                 headers: { Authorization: `Bearer ${token.value}` },
                 cache: "no-store",
+                signal: AbortSignal.timeout(5000),
             });
             if (!meRes.ok) {
                 const loginUrl = new URL("/auth/login", request.url);
