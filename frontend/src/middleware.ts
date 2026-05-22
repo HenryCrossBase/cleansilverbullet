@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const publicPaths = [
         "/auth/login",
         "/auth/register",
@@ -32,24 +32,20 @@ export function middleware(request: NextRequest) {
 
     if (request.nextUrl.pathname.startsWith("/admin")) {
         try {
-            const parts = token.value.split(".");
-            if (parts.length !== 3) throw new Error("Invalid token");
-            const base64Url = parts[1];
-            const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-            const jsonPayload = decodeURIComponent(
-                atob(base64)
-                    .split("")
-                    .map(function (c) {
-                        return (
-                            "%" +
-                            ("00" + c.charCodeAt(0).toString(16)).slice(-2)
-                        );
-                    })
-                    .join(""),
-            );
-
-            const payload = JSON.parse(jsonPayload);
-            if (payload.rank !== "ADMIN") {
+            const apiBase =
+                process.env.NEXT_PUBLIC_API_PROXY_URL ||
+                process.env.NEXT_PUBLIC_API_BASE_URL ||
+                "";
+            const meRes = await fetch(`${apiBase}/api/user/me`, {
+                headers: { Authorization: `Bearer ${token.value}` },
+                cache: "no-store",
+            });
+            if (!meRes.ok) {
+                const loginUrl = new URL("/auth/login", request.url);
+                return NextResponse.redirect(loginUrl);
+            }
+            const me = (await meRes.json()) as { user?: { rank?: string } };
+            if (me?.user?.rank !== "ADMIN") {
                 const vendorUrl = new URL("/vendor/dashboard", request.url);
                 return NextResponse.redirect(vendorUrl);
             }

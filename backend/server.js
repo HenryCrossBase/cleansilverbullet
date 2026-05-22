@@ -108,6 +108,26 @@ function createApp() {
     app.use(mainRouter);
     setupSwagger(app);
 
+    app.use((err, req, res, next) => {
+        const requestId = res.getHeader("x-request-id");
+        const status = Number.isInteger(err?.status) && err.status >= 400 && err.status < 600
+            ? err.status
+            : 500;
+        logger.error({
+            err: { message: err?.message, name: err?.name, stack: err?.stack },
+            requestId,
+            method: req.method,
+            path: req.originalUrl,
+        }, "Unhandled error");
+
+        if (res.headersSent) return next(err);
+        // body-parser JSON errors specifically — give a useful 400 instead of 500.
+        if (err?.type === "entity.parse.failed" || err instanceof SyntaxError) {
+            return res.status(400).json({ error: "Invalid JSON body." });
+        }
+        res.status(status).json({ error: status >= 500 ? "Internal server error." : (err?.message || "Bad request.") });
+    });
+
     return app;
 }
 

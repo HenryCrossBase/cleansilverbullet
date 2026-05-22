@@ -52,7 +52,6 @@ const PUBLIC_UPLOAD_EXTENSIONS = new Set([
     ".jpeg",
     ".gif",
     ".webp",
-    ".svg",
 ]);
 router.use(
     "/uploads",
@@ -61,6 +60,9 @@ router.use(
         if (!PUBLIC_UPLOAD_EXTENSIONS.has(ext)) {
             return res.status(403).json({ error: "Forbidden file type." });
         }
+        // Conservative headers so future bugs don't compound here.
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self'");
         return next();
     },
     express.static(path.join(__dirname, "uploads"), {
@@ -69,6 +71,5 @@ router.use(
         maxAge: "1h",
     }),
 );
-
 
 module.exports = router;

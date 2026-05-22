@@ -334,70 +334,77 @@ router.post(
             const user = await prisma.user.findUnique({
                 where: { id: req.user.id },
             });
+            if (!user) return res.status(404).json({ error: "User not found." });
             const isAdmin = user.rank === "ADMIN";
 
-            if (!isAdmin && user.credits < costBlt) {
-                return res
-                    .status(400)
-                    .json({ error: "Insufficient BLT Balance." });
-            }
-
-            const updateData = {};
-            if (!isAdmin) {
-                updateData.credits = user.credits - costBlt;
-            }
-
-            if (itemType.startsWith("RANK_")) {
-                const rankRank = itemType.split("_")[1]; // STARTER, PRO, PREMIUM, ENTERPRISE
-
+            const result = await prisma.$transaction(async (tx) => {
                 if (!isAdmin) {
-                    updateData.rank = rankRank;
-                }
-                if (["PREMIUM", "ENTERPRISE"].includes(rankRank) || isAdmin) {
-                    updateData.hasSoftwareLicense = true;
-                }
-            } else if (itemType === "SOFTWARE_ONLY") {
-                updateData.hasSoftwareLicense = true;
-            } else if (itemType === "SUB_BLUE_BADGE") {
-                const expiry = new Date();
-                expiry.setDate(expiry.getDate() + 30);
-                updateData.hasBlueBadge = true;
-                updateData.blueBadgeExpiry = expiry;
-            } else if (itemType === "SUB_COSMETICS") {
-                const expiry = new Date();
-                expiry.setDate(expiry.getDate() + 30);
-                updateData.colorPassExpiry = expiry;
-            }
-
-            await prisma.user.update({
-                where: { id: req.user.id },
-                data: updateData,
-            });
-
-            if (isVendorRank) {
-                const existingUserShop = await prisma.shop.findFirst({
-                    where: { ownerId: user.id },
-                });
-                if (!existingUserShop) {
-                    await prisma.shop.create({
-                        data: {
-                            ownerId: user.id,
-                            shopName: cleanShopName,
-                            shopDescription:
-                                "A brand new seller on the Silverbullet Marketplace.",
-                            isTrusted: false,
-                        },
+                    const debited = await tx.user.updateMany({
+                        where: { id: req.user.id, credits: { gte: costBlt } },
+                        data: { credits: { decrement: costBlt } },
                     });
-                } else {
-                    await prisma.shop.update({
-                        where: { id: existingUserShop.id },
-                        data: { shopName: cleanShopName },
+                    if (debited.count === 0) {
+                        throw new Error("INSUFFICIENT_BLT");
+                    }
+                }
+
+                const sideEffects = {};
+                if (itemType.startsWith("RANK_")) {
+                    const rankRank = itemType.split("_")[1];
+                    if (!isAdmin) sideEffects.rank = rankRank;
+                    if (["PREMIUM", "ENTERPRISE"].includes(rankRank) || isAdmin) {
+                        sideEffects.hasSoftwareLicense = true;
+                    }
+                } else if (itemType === "SOFTWARE_ONLY") {
+                    sideEffects.hasSoftwareLicense = true;
+                } else if (itemType === "SUB_BLUE_BADGE") {
+                    const expiry = new Date();
+                    expiry.setDate(expiry.getDate() + 30);
+                    sideEffects.hasBlueBadge = true;
+                    sideEffects.blueBadgeExpiry = expiry;
+                } else if (itemType === "SUB_COSMETICS") {
+                    const expiry = new Date();
+                    expiry.setDate(expiry.getDate() + 30);
+                    sideEffects.colorPassExpiry = expiry;
+                }
+
+                if (Object.keys(sideEffects).length > 0) {
+                    await tx.user.update({
+                        where: { id: req.user.id },
+                        data: sideEffects,
                     });
                 }
-            }
+
+                if (isVendorRank) {
+                    const existingUserShop = await tx.shop.findFirst({
+                        where: { ownerId: user.id },
+                    });
+                    if (!existingUserShop) {
+                        await tx.shop.create({
+                            data: {
+                                ownerId: user.id,
+                                shopName: cleanShopName,
+                                shopDescription:
+                                    "A brand new seller on the Silverbullet Marketplace.",
+                                isTrusted: false,
+                            },
+                        });
+                    } else {
+                        await tx.shop.update({
+                            where: { id: existingUserShop.id },
+                            data: { shopName: cleanShopName },
+                        });
+                    }
+                }
+
+                return true;
+            }, { isolationLevel: "Serializable" });
 
             res.json(billingResponse.upgradePurchased());
         } catch (err) {
+            if (err?.message === "INSUFFICIENT_BLT") {
+                return res.status(400).json({ error: "Insufficient BLT Balance." });
+            }
             logger.error("Purchase error:", err);
             res.status(500).json({
                 error: "Failed to process internal transaction.",

@@ -121,7 +121,7 @@ function computePermissions(rank, adminRoles) {
     if (rank !== "ADMIN") return [];
     const roles = parseAdminRoles(adminRoles);
     if (roles.length === 0) {
-        return [...new Set(Object.values(ROLE_PERMISSIONS).flat())];
+        return [];
     }
     const permissions = new Set();
 
@@ -163,6 +163,7 @@ async function loadUserAuthState(userId) {
             adminRoles: true,
             bannedUntil: true,
             banReason: true,
+            passwordChangedAt: true,
         },
     });
 }
@@ -196,6 +197,7 @@ async function setCachedAuthState(user) {
         adminRoles: user.adminRoles || null,
         bannedUntil: user.bannedUntil || null,
         banReason: user.banReason || null,
+        passwordChangedAt: user.passwordChangedAt || null,
     };
 
     authCache.set(user.id, {
@@ -254,6 +256,18 @@ async function authenticateToken(req, res, next) {
                     error: "BANNED",
                     reason: dbUser.banReason || "Policy enforcement",
                 });
+        }
+
+        if (dbUser.passwordChangedAt && typeof decoded.iat === "number") {
+            const passwordChangedAtSec = Math.floor(
+                new Date(dbUser.passwordChangedAt).getTime() / 1000,
+            );
+            // 1s leeway for clock skew on the issue->verify race
+            if (decoded.iat + 1 < passwordChangedAtSec) {
+                return res.status(401).json({
+                    error: "Session invalidated. Please log in again.",
+                });
+            }
         }
 
         req.user = {

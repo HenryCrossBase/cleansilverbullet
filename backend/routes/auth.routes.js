@@ -1,5 +1,6 @@
 const express = require("express");
 const fs = require("fs");
+const rateLimit = require("express-rate-limit");
 const otplib = require("otplib");
 const { validate } = require("../validators/middleware");
 const { authValidators } = require("../validators/auth.validator");
@@ -349,7 +350,7 @@ router.get("/auth/verify", async (req, res) => {
         return res.redirect(`${APP_BASE_URL}/auth/login?error=invalid_token`);
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
         if (decoded.purpose !== "VERIFY_EMAIL")
             throw new Error("Invalid token purpose");
 
@@ -506,7 +507,7 @@ router.post(
                 let isTrusted = false;
                 if (trustedDeviceToken) {
                     try {
-                        const decodedTrust = jwt.verify(trustedDeviceToken, JWT_SECRET);
+                        const decodedTrust = jwt.verify(trustedDeviceToken, JWT_SECRET, { algorithms: ["HS256"] });
                         if (decodedTrust.purpose === "TRUSTED_DEVICE" && decodedTrust.userId === user.id) {
                             isTrusted = true;
                         }
@@ -564,7 +565,15 @@ router.post(
     },
 );
 
-router.post("/auth/login/verify-2fa", authRateLimiter, async (req, res) => {
+const verify2faLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 8,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many 2FA attempts. Please wait." },
+});
+
+router.post("/auth/login/verify-2fa", verify2faLimiter, async (req, res) => {
     try {
         const { tempToken, code, trustDevice } = req.body;
         if (!tempToken || !code) {
@@ -573,7 +582,7 @@ router.post("/auth/login/verify-2fa", authRateLimiter, async (req, res) => {
 
         let decoded;
         try {
-            decoded = jwt.verify(tempToken, JWT_SECRET);
+            decoded = jwt.verify(tempToken, JWT_SECRET, { algorithms: ["HS256"] });
         } catch (err) {
             return res.status(401).json({ error: "Invalid or expired session token." });
         }
@@ -808,14 +817,17 @@ router.post("/auth/reset-password", authRateLimiter, async (req, res) => {
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
         if (decoded.purpose !== "RECOVERY")
             throw new Error("Invalid token purpose");
 
         const passwordHash = await argon2.hash(password);
         await prisma.user.update({
             where: { id: decoded.id },
-            data: { passwordHash },
+            data: {
+                passwordHash,
+                passwordChangedAt: new Date(),
+            },
         });
 
         return res

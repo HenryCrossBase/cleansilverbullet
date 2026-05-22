@@ -14,8 +14,6 @@ const {
     VENDOR_DASHBOARD_URL,
     HCAPTCHA_SECRET_KEY,
     CF_SECRET_KEY_PRODUCTION,
-    TELEGRAM_CHANNEL_BOT_TOKEN,
-    TELEGRAM_CHANNEL_ID,
 } = require("../env");
 const prisma = require("../lib/prisma");
 const {
@@ -25,7 +23,6 @@ const {
 } = require("../lib/auth");
 const { getPublicKey, decryptBase64Payload } = require("../lib/cryptoKeys");
 const { appendWebhookLog, getLogger } = require("../lib/logger");
-
 
 const LAST_ONLINE_SYNC_MS = 5 * 60 * 1000;
 const lastOnlineTouch = new Map();
@@ -176,44 +173,27 @@ const sendVendorTelegramAlert = async (chatId, message) => {
     }
 };
 
-const sendChannelTelegramAlert = async (message) => {
-    if (!TELEGRAM_CHANNEL_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) return;
-    try {
-        const tgRes = await fetch(
-            `https://api.telegram.org/bot${TELEGRAM_CHANNEL_BOT_TOKEN}/sendMessage`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    chat_id: TELEGRAM_CHANNEL_ID,
-                    text: message,
-                    parse_mode: "HTML",
-                }),
-            },
-        );
-        const tgo = await tgRes.text();
-        appendWebhookLog(
-            `[CHANNEL PUSH] Channel: ${TELEGRAM_CHANNEL_ID} - Status: ${tgRes.status} - Output: ${tgo}`,
-        );
-    } catch (error) {
-        logger.error("Telegram Channel Webhook Error", error);
-    }
-};
-
 const maskUsername = (username, req) => {
     if (req?.user?.rank === "ADMIN") return username;
     const showLen = Math.ceil(username.length / 2);
     return username.substring(0, showLen) + "***";
 };
 
+const AVATAR_EXT_BY_MIME = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+};
 const avatarStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, UPLOAD_DIR);
     },
     filename: (req, file, cb) => {
+        const ext = AVATAR_EXT_BY_MIME[file.mimetype] || ".bin";
         cb(
             null,
-            `avatar-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`,
+            `avatar-${req.user.id}-${Date.now()}${ext}`,
         );
     },
 });
@@ -222,8 +202,8 @@ const avatarUpload = multer({
     storage: avatarStorage,
     limits: { fileSize: 2 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        if (!file.mimetype.startsWith("image/")) {
-            return cb(new Error("Only image files are allowed."));
+        if (!AVATAR_EXT_BY_MIME[file.mimetype]) {
+            return cb(new Error("Only PNG, JPEG, GIF, or WEBP avatars are allowed."));
         }
         cb(null, true);
     },
@@ -253,7 +233,6 @@ module.exports = {
     publicSubmitLimiter,
     sendAdminTelegramAlert,
     sendVendorTelegramAlert,
-    sendChannelTelegramAlert,
     signAuthToken,
     upload,
     verifyHcaptcha,

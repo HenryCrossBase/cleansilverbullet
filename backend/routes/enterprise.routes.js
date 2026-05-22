@@ -8,7 +8,6 @@ const {
     authenticateToken,
     prisma,
     sendAdminTelegramAlert,
-    sendChannelTelegramAlert,
     maskUsername,
 } = require("./shared");
 const { getLogger } = require("../lib/logger");
@@ -147,12 +146,29 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
-            include: {
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                rank: true,
+                credits: true,
+                vendorBalance: true,
+                avatarUrl: true,
+                bio: true,
+                createdAt: true,
+                lastOnline: true,
+                hasBlueBadge: true,
+                hasSoftwareLicense: true,
+                nameColor: true,
+                nameEffect: true,
+                customBadges: true,
+                customSplit: true,
+                twoFactorEnabled: true,
+                // telegramChatId is intentionally NOT selected — it pivots forum
+                // identity to Telegram identity for any XSS that lands here.
                 shops: {
                     include: {
-                        products: {
-                            orderBy: { createdAt: "desc" },
-                        },
+                        products: { orderBy: { createdAt: "desc" } },
                     },
                 },
             },
@@ -266,8 +282,6 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
                 ),
             }));
         } catch (e) {}
-
-
 
         await prisma.notification.updateMany({
             where: { userId: user.id, type: "DISPUTE", read: false },
@@ -393,7 +407,6 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
 
         sellersWithEarnings.sort((a, b) => b.totalEarnings - a.totalEarnings);
         const topStores = sellersWithEarnings.slice(0, 10);
-
 
         res.json(
             enterpriseResponse.dashboard({
@@ -644,6 +657,8 @@ router.put(
     },
 );
 
+const MIN_BID_BLT = 1;
+
 router.post(
     "/product-bid",
     authenticateToken,
@@ -651,6 +666,11 @@ router.post(
     async (req, res) => {
         const { productId, amount } = req.body;
         const bidAmount = parseFloat(amount);
+        if (!Number.isFinite(bidAmount) || bidAmount < MIN_BID_BLT) {
+            return res.status(400).json({
+                error: `Minimum bid is ${MIN_BID_BLT} BLT.`,
+            });
+        }
 
         try {
             const user = await prisma.user.findUnique({
@@ -706,6 +726,11 @@ router.post(
     async (req, res) => {
         const { productName, amount } = req.body;
         const bidAmount = parseFloat(amount);
+        if (!Number.isFinite(bidAmount) || bidAmount < MIN_BID_BLT) {
+            return res.status(400).json({
+                error: `Minimum bid is ${MIN_BID_BLT} BLT.`,
+            });
+        }
 
         try {
             const user = await prisma.user.findUnique({
@@ -846,130 +871,65 @@ router.post(
             if (lines.length === 0)
                 return res.status(400).json({ error: "Payload nullified." });
 
-            let addedCount = 0;
-            let duplicatedCount = 0;
-            let failedCount = 0;
+            const ownShopIds = user.shops.map((s) => s.id);
+            const duplicateCheck = await prisma.product.findFirst({
+                where: {
+                    shopId: { in: ownShopIds },
+                    logContent: { in: lines.map(l => l.trim()) },
+                },
+            });
+
+            if (duplicateCheck) {
+                return res.status(400).json({ error: "You are already selling this exact item." });
+            }
 
             const payloadMappings = [];
-            const batchLogs = new Set();
-            const validLogsToCheck = [];
-            const parsedLines = [];
-
+            
             for (const line of lines) {
                 const trimmedLine = line.trim();
+                
                 if (req.body.isBulk) {
-                    const parts = trimmedLine.split('|').map((p) => p.trim());
+                    const parts = trimmedLine.split(' | ');
                     if (parts.length !== 6) {
-                        failedCount++;
-                        continue;
+                        return res.status(400).json({ error: "Wrong format! Bulk upload MUST use: ProductName | CountryCode | Description | URL | Email | Password" });
                     }
                     
-                    const pName = parts[0];
-                    const pCountry = parts[1];
-                    const pDesc = parts[2];
-                    const pUrl = parts[3];
-                    const pEmail = parts[4];
-                    const pPass = parts[5];
+                    const pName = parts[0].trim();
+                    const pCountry = parts[1].trim();
+                    const pDesc = parts[2].trim();
+                    const pUrl = parts[3].trim();
+                    const pEmail = parts[4].trim();
+                    const pPass = parts[5].trim();
                     
-                    const logContentValue = `${pUrl} | ${pEmail} | ${pPass}`;
-                    validLogsToCheck.push(logContentValue);
-                    parsedLines.push({
-                        isBulk: true,
+                    payloadMappings.push({
+                        shopId: user.shops[0].id,
                         productName: pName,
-                        country: pCountry,
                         description: pDesc,
-                        logContent: logContentValue
+                        price: parseInt(price),
+                        logContent: `${pUrl} | ${pEmail} | ${pPass}`,
+                        category: category || "GENERAL",
+                        country: pCountry || "Global",
+                        stock: 1,
                     });
                 } else {
-                    validLogsToCheck.push(trimmedLine);
-                    parsedLines.push({
-                        isBulk: false,
+                    payloadMappings.push({
+                        shopId: user.shops[0].id,
                         productName,
-                        country,
                         description,
-                        logContent: trimmedLine
+                        price: parseInt(price),
+                        logContent: trimmedLine,
+                        category: category || "GENERAL",
+                        country: country || "Global",
+                        stock: 1,
                     });
                 }
             }
 
-            // High performance batch duplicate check
-            const existingDuplicates = new Set();
-            if (validLogsToCheck.length > 0) {
-                const dbDuplicates = await prisma.product.findMany({
-                    where: {
-                        logContent: {
-                            in: validLogsToCheck
-                        }
-                    },
-                    select: {
-                        logContent: true
-                    }
-                });
-                for (const d of dbDuplicates) {
-                    existingDuplicates.add(d.logContent);
-                }
-            }
-
-            // Build payload mappings and increment duplicate counters
-            for (const item of parsedLines) {
-                if (existingDuplicates.has(item.logContent)) {
-                    duplicatedCount++;
-                    continue;
-                }
-                if (batchLogs.has(item.logContent)) {
-                    duplicatedCount++;
-                    continue;
-                }
-                
-                batchLogs.add(item.logContent);
-                payloadMappings.push({
-                    shopId: user.shops[0].id,
-                    productName: item.productName || productName,
-                    description: item.description || description,
-                    price: parseInt(price),
-                    logContent: item.logContent,
-                    category: category || "GENERAL",
-                    country: item.country || country || "Global",
-                    stock: 1,
-                });
-                addedCount++;
-            }
-
-            if (payloadMappings.length > 0) {
-                await prisma.product.createMany({
-                    data: payloadMappings,
-                });
-
-                // --- Telegram Restock Channel Notification ---
-                try {
-                    const shopName = user.shops[0].shopName;
-                    const productCounts = {};
-                    for (const p of payloadMappings) {
-                        const name = p.productName;
-                        if (name) {
-                            productCounts[name] = (productCounts[name] || 0) + 1;
-                        }
-                    }
-                    
-                    const parts = Object.entries(productCounts).map(([name, count]) => `<b>${count} ${name}</b>`);
-                    if (parts.length > 0) {
-                        const message = `🚀 <b>${shopName}</b> have added ${parts.join(", ")}!`;
-                        sendChannelTelegramAlert(message).catch((err) => {
-                            logger.error("Failed to send restock channel alert async:", err);
-                        });
-                    }
-                } catch (tgErr) {
-                    logger.error("Failed to send restock channel alert:", tgErr);
-                }
-            }
-
-            res.json({
-                success: true,
-                message: "Injection process complete.",
-                added: addedCount,
-                duplicated: duplicatedCount,
-                failed: failedCount
+            await prisma.product.createMany({
+                data: payloadMappings,
             });
+
+            res.json(enterpriseResponse.productsCreated(lines.length));
         } catch (err) {
             res.status(500).json({ error: "Log database lock." });
         }
@@ -1133,13 +1093,47 @@ router.post(
                 else if (bannerUrl !== undefined && bannerUrl.trim() === "")
                     dataUpdate.bannerUrl = null;
 
-                if (shopName !== undefined && shopName.trim() !== "")
-                    dataUpdate.shopName = shopName.trim();
+                if (shopName !== undefined && shopName.trim() !== "") {
+                    const requested = shopName.trim();
+                    const regex = /^[A-Za-z0-9 ]+$/;
+                    if (requested.length < 4 || requested.length > 30 || !regex.test(requested)) {
+                        return res.status(400).json({
+                            error: "Store name must be 4-30 characters, letters/numbers/spaces only.",
+                        });
+                    }
+                    const collision = await prisma.shop.findFirst({
+                        where: {
+                            shopName: { equals: requested, mode: "insensitive" },
+                            id: { not: shop.id },
+                        },
+                        select: { id: true },
+                    });
+                    if (collision) {
+                        return res.status(409).json({
+                            error: "That store name is already taken.",
+                        });
+                    }
+                    dataUpdate.shopName = requested;
+                }
                 if (
                     shopDescription !== undefined &&
                     shopDescription.trim() !== ""
                 )
                     dataUpdate.shopDescription = shopDescription.trim();
+
+                const isHttpUrl = (v) => {
+                    if (typeof v !== "string" || !v) return false;
+                    try {
+                        const u = new URL(v);
+                        return u.protocol === "http:" || u.protocol === "https:";
+                    } catch { return false; }
+                };
+                if (dataUpdate.avatarUrl !== undefined && dataUpdate.avatarUrl !== null && !isHttpUrl(dataUpdate.avatarUrl)) {
+                    return res.status(400).json({ error: "Avatar URL must be http(s)." });
+                }
+                if (dataUpdate.bannerUrl !== undefined && dataUpdate.bannerUrl !== null && !isHttpUrl(dataUpdate.bannerUrl)) {
+                    return res.status(400).json({ error: "Banner URL must be http(s)." });
+                }
 
                 await prisma.shop.update({
                     where: { id: shop.id },
@@ -1202,40 +1196,44 @@ router.post(
                     .status(400)
                     .json({ error: "Missing withdrawal payload factors." });
 
-            const user = await prisma.user.findUnique({
-                where: { id: req.user.id },
-            });
             const reqAmount = parseFloat(amount);
-
-            if (reqAmount < 50)
+            if (!Number.isFinite(reqAmount) || reqAmount < 50) {
                 return res.status(400).json({
                     error: "Minimum withdrawal limit is exactly $50.00.",
                 });
-            if (reqAmount > user.vendorBalance)
-                return res
-                    .status(400)
-                    .json({ error: "Insufficient Vault balance." });
+            }
 
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { vendorBalance: { decrement: reqAmount } },
-            });
+            const wd = await prisma.$transaction(async (tx) => {
+                const balanceUpdate = await tx.user.updateMany({
+                    where: { id: req.user.id, vendorBalance: { gte: reqAmount } },
+                    data: { vendorBalance: { decrement: reqAmount } },
+                });
+                if (balanceUpdate.count === 0) {
+                    throw new Error("INSUFFICIENT_BALANCE");
+                }
+                return tx.withdrawal.create({
+                    data: {
+                        userId: req.user.id,
+                        amount: reqAmount,
+                        cryptoAddress: String(cryptoAddress).slice(0, 200),
+                        network: String(network).slice(0, 64),
+                        status: "PENDING",
+                    },
+                });
+            }, { isolationLevel: "Serializable" });
 
-            const wd = await prisma.withdrawal.create({
-                data: {
-                    userId: user.id,
-                    amount: reqAmount,
-                    cryptoAddress,
-                    network,
-                    status: "PENDING",
-                },
-            });
-
-            const text = `<b>[ 💸 NEW VENDOR WITHDRAWAL ]</b>\n\n<b>Vendor:</b> <code>${user.username}</code>\n<b>Amount (Fees Auto-Deducted):</b> $${reqAmount.toFixed(2)}\n<b>Network:</b> ${network}\n<b>Address:</b> <code>${cryptoAddress}</code>\n\n<i>Open the Admin Bot Dashboard to MARK PAID or REJECT.</i>`;
+            const safeUsername = String(req.user.username).replace(/[<>&]/g, "");
+            const safeAddr = String(cryptoAddress).replace(/[<>&]/g, "").slice(0, 200);
+            const safeNetwork = String(network).replace(/[<>&]/g, "").slice(0, 64);
+            const text = `<b>[ 💸 NEW VENDOR WITHDRAWAL ]</b>\n\n<b>Vendor:</b> <code>${safeUsername}</code>\n<b>Amount (Fees Auto-Deducted):</b> $${reqAmount.toFixed(2)}\n<b>Network:</b> ${safeNetwork}\n<b>Address:</b> <code>${safeAddr}</code>\n\n<i>Open the Admin Bot Dashboard to MARK PAID or REJECT.</i>`;
             await sendAdminTelegramAlert(text);
 
             return res.json(enterpriseResponse.withdrawCreated());
         } catch (err) {
+            if (err?.message === "INSUFFICIENT_BALANCE") {
+                return res.status(400).json({ error: "Insufficient Vault balance." });
+            }
+            logger.error("Withdraw error:", err);
             res.status(500).json({ error: "Vault lock exception." });
         }
     },

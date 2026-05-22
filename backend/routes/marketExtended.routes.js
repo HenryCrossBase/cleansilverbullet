@@ -135,75 +135,79 @@ router.post(
             const productId = req.params.productId;
             const buyerId = req.user.id;
             const amount = parseInt(req.body.amount, 10) || 1;
-
-            const product = await prisma.product.findUnique({
-                where: { id: productId },
-                include: { shop: { include: { owner: true } } },
-            });
-
-            if (!product)
-                return res
-                    .status(404)
-                    .json({ error: "Payload physically missing." });
-
-            const lines = product.logContent
-                .split("\n")
-                .filter((l) => l.trim() !== "");
-            if (amount > lines.length) {
-                return res.status(400).json({
-                    error: `Not enough stock. Only ${lines.length} lines available.`,
-                });
+            if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+                return res.status(400).json({ error: "Invalid amount." });
             }
 
-            const purchasedLines = lines.slice(0, amount).join("\n");
-            const remainingLines = lines.slice(amount).join("\n");
+            const result = await prisma.$transaction(async (tx) => {
+                const product = await tx.product.findUnique({
+                    where: { id: productId },
+                    include: { shop: { include: { owner: true } } },
+                });
+                if (!product) throw new Error("PRODUCT_MISSING");
 
-            const priceUsd = product.price * amount;
-            const splitRate =
-                product.shop.owner.customSplit !== null
-                    ? product.shop.owner.customSplit
-                    : (product.shop.owner.rank === "ENTERPRISE" || product.shop.owner.rank === "ADMIN")
+                if (product.shop.owner.id === buyerId) {
+                    throw new Error("SELF_TRADE_BLOCKED");
+                }
+
+                const lines = product.logContent
+                    .split("\n")
+                    .filter((l) => l.trim() !== "");
+                if (amount > lines.length) {
+                    throw new Error(`INSUFFICIENT_STOCK:${lines.length}`);
+                }
+
+                const purchasedLines = lines.slice(0, amount).join("\n");
+                const remainingLines = lines.slice(amount).join("\n");
+
+                const priceUsd = product.price * amount;
+                const ownerRank = product.shop.owner.rank;
+                const customSplit = product.shop.owner.customSplit;
+                // Clamp customSplit to [0, 1] defensively even though admin endpoints
+                // should enforce that — the admin Telegram bot historically did not.
+                const splitRate = (customSplit !== null && customSplit >= 0 && customSplit <= 1)
+                    ? customSplit
+                    : (ownerRank === "ENTERPRISE" || ownerRank === "ADMIN")
                       ? 0.75
-                      : product.shop.owner.rank === "PREMIUM"
+                      : ownerRank === "PREMIUM"
                         ? 0.6
                         : 0.5;
-            const vendorRevenue = (priceUsd * splitRate) - ((product.marketBid || 0) * amount);
+                const vendorRevenue = Math.max(0,
+                    (priceUsd * splitRate) - ((product.marketBid || 0) * amount));
 
-            const buyer = await prisma.user.findUnique({
-                where: { id: buyerId },
-            });
-            if (buyer.credits < priceUsd) {
-                return res.status(400).json({ error: "Insufficient Bullets." });
-            }
+                const stockUpdate = await tx.product.updateMany({
+                    where: { id: product.id, stock: { gte: amount } },
+                    data: {
+                        logContent: remainingLines,
+                        stock: { decrement: amount },
+                    },
+                });
+                if (stockUpdate.count === 0) throw new Error("INSUFFICIENT_STOCK_RACE");
 
-            await prisma.$transaction([
-                prisma.user.update({
-                    where: { id: buyerId },
+                const buyerUpdate = await tx.user.updateMany({
+                    where: { id: buyerId, credits: { gte: priceUsd } },
                     data: { credits: { decrement: priceUsd } },
-                }),
+                });
+                if (buyerUpdate.count === 0) throw new Error("INSUFFICIENT_FUNDS");
 
-                prisma.user.update({
+                await tx.user.update({
                     where: { id: product.shop.owner.id },
                     data: { vendorBalance: { increment: vendorRevenue } },
-                }),
+                });
 
-                prisma.order.create({
+                await tx.order.create({
                     data: {
                         productId: product.id,
                         userId: buyerId,
                         pricePaid: priceUsd,
                         purchasedContent: purchasedLines,
                     },
-                }),
+                });
 
-                prisma.product.update({
-                    where: { id: product.id },
-                    data: {
-                        logContent: remainingLines,
-                        stock: lines.length - amount,
-                    },
-                }),
-            ]);
+                return { product, purchasedLines };
+            }, { isolationLevel: "Serializable" });
+
+            const { product, purchasedLines } = result;
 
             if (product.shop.owner.telegramChatId) {
                 sendVendorTelegramAlert(
@@ -214,9 +218,25 @@ router.post(
 
             res.json(marketExtendedResponse.purchase(purchasedLines));
         } catch (err) {
-            res.status(500).json({
-                error: "Marketplace Execution Failure.",
-            });
+            const msg = err?.message || "";
+            if (msg === "PRODUCT_MISSING") {
+                return res.status(404).json({ error: "Payload physically missing." });
+            }
+            if (msg === "SELF_TRADE_BLOCKED") {
+                return res.status(403).json({ error: "You cannot purchase from your own shop." });
+            }
+            if (msg.startsWith("INSUFFICIENT_STOCK:")) {
+                const have = msg.split(":")[1];
+                return res.status(400).json({ error: `Not enough stock. Only ${have} lines available.` });
+            }
+            if (msg === "INSUFFICIENT_STOCK_RACE") {
+                return res.status(400).json({ error: "Stock depleted." });
+            }
+            if (msg === "INSUFFICIENT_FUNDS") {
+                return res.status(400).json({ error: "Insufficient Bullets." });
+            }
+            logger.error("Marketplace buy error:", err);
+            res.status(500).json({ error: "Marketplace Execution Failure." });
         }
     },
 );
@@ -415,31 +435,9 @@ router.post(
 router.post(
     "/vendor/replace-log",
     authenticateToken,
-    ...validate(marketExtendedValidators.replaceLog),
-    async (req, res) => {
-        const { disputeId, replacementLog } = req.body;
-        if (!disputeId || !replacementLog)
-            return res.status(400).json({ error: "Invalid payload." });
-
-        try {
-            const dispute = await prisma.dispute.findUnique({
-                where: { id: disputeId },
-            });
-            if (!dispute || dispute.vendorId !== req.user.id)
-                return res
-                    .status(403)
-                    .json({ error: "Unauthorized manipulation." });
-
-            await prisma.dispute.update({
-                where: { id: disputeId },
-                data: { status: "PENDING_ADMIN", replacementLog },
-            });
-
-            res.json(marketExtendedResponse.replacementQueued());
-        } catch (err) {
-            res.status(500).json({ error: "Replacement injection error." });
-        }
-    },
+    (_req, res) => res.status(410).json({
+        error: "Endpoint deprecated. Use the dispute thread to negotiate a replacement.",
+    }),
 );
 
 module.exports = { path: "/api", router };
